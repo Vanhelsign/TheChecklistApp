@@ -23,7 +23,7 @@ type TaskFormModalProps = {
   mode: TaskModalMode;
   task?: Task;
   currentUserId: number;
-  onSave: (taskData: Omit<Task, 'id' | 'completed' | 'createdAt'>) => void;
+  onSave: (taskData: Omit<Task, 'id' | 'createdAt'>) => void;
   onUpdate: (taskId: number, taskData: Omit<Task, 'id' | 'createdBy' | 'createdAt'>) => void;
   onClose: () => void;
   onDelete?: (taskId: number) => void;
