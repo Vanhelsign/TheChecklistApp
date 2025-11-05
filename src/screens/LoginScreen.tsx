@@ -7,8 +7,7 @@ import {
   TouchableOpacity, 
   SafeAreaView, 
   ScrollView,
-  TextInput,
-  Alert
+  TextInput
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, UserType } from '../types/navigation';
@@ -17,49 +16,32 @@ import { StatusBar } from 'expo-status-bar';
 import { mockUsers } from '../data/users';
 import { Ionicons } from '@expo/vector-icons';
 
-import { userOperations } from '../database/userOperations';
-
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Por favor ingresa email y contraseña');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // Usar la base de datos real en lugar de mockUsers
-      const user = await userOperations.getUserByCredentials(email, password);
-      
-      if (user) {
-        // Login exitoso - navegar a Home con datos del usuario
-        navigation.navigate('Home', { 
-          userType: user.role,
-          userId: user.id,
-          userName: user.name,
-          userTeamIds: user.teamIds
-        });
-      } else {
-        // Credenciales incorrectas
-        Alert.alert('Error', 'Email o contraseña incorrectos');
-      }
-    } catch (error) {
-      console.error('Error en login:', error);
-      Alert.alert('Error', 'Ocurrió un error al iniciar sesión');
-    } finally {
-      setIsLoading(false);
+  const handleLogin = () => {
+    // Buscar usuario que coincida con email y password
+    const user = mockUsers.find(u => u.email === email && u.password === password);
+    
+    if (user) {
+      // Login exitoso - navegar a Home con datos del usuario
+      navigation.replace('Home', { 
+        userType: user.role,
+        userId: user.id,
+        userName: user.name,
+        userTeamIds: user.teamIds
+      });
+    } else {
+      // Credenciales incorrectas
+      alert('Email o contraseña incorrectos');
     }
   };
 
   const handleCreateAccount = () => {
-    Alert.alert('Crear cuenta', 'Esta funcionalidad estará disponible pronto');
+    console.log('Crear cuenta presionado');
   };
 
   return (

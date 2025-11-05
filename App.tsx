@@ -9,35 +9,16 @@ import CompletedTasksScreen from './src/screens/CompletedTasksScreen';
 import TasksScreen from './src/screens/TasksScreen';
 import TeamsScreen from './src/screens/TeamsScreen';
 
-import { RootStackParamList, UserParams } from './src/types/navigation';
+import { RootStackParamList } from './src/types/navigation';
 import { StatusBar } from 'expo-status-bar';
-
-import { initDatabase, initializeSampleData } from './src/database/database';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
-
-  const [dbReady, setDbReady] = React.useState(false);
-
-  React.useEffect(() => {
-    const initializeDB = async () => {
-      try {
-        await initDatabase();
-        await initializeSampleData();
-        setDbReady(true);
-        console.log('✅ Base de datos lista');
-      } catch (error) {
-        console.error('❌ Error inicializando DB:', error);
-        setDbReady(true); // Igual dejamos que continúe la app
-      }
-    };
-
-    initializeDB();
-  }, []);
-
   return (
+
     <>
+
     <StatusBar 
     translucent
     backgroundColor="transparent" 

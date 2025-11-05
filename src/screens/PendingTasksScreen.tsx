@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import SideNavbar from '../components/SideNavbar';
 import MenuButton from '../components/MenuButton';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'PendingTasks'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'CompletedTasks'>;
 
 export default function CompletedTasksScreen({ route, navigation }: Props) {
 
@@ -35,7 +35,7 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
 
   // Estados para la navbar
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [activeScreen, setActiveScreen] = useState('PendingTasks');
+  const [activeScreen, setActiveScreen] = useState('CompletedTasks');
   const slideAnim = useState(new Animated.Value(-280))[0];
 
   // Filtrar tareas completadas
@@ -62,7 +62,7 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
   const navigateTo = (screenName: keyof RootStackParamList) => {
     setActiveScreen(screenName);
     
-    if (screenName === 'PendingTasks') {
+    if (screenName === 'CompletedTasks') {
       toggleNav();
       return;
     }
@@ -74,8 +74,8 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
       case 'Login':
         navigation.navigate('Login');
         break;
-      case 'CompletedTasks':
-        navigation.navigate('CompletedTasks', userParams);
+      case 'PendingTasks':
+        navigation.navigate('PendingTasks', userParams);
         break;
       case 'Tasks':
         navigation.navigate('Tasks', userParams);
