@@ -128,19 +128,19 @@ export default function TeamsScreen({ route, navigation }: Props) {
     setSelectedTeam(undefined);
     setModalVisible(true);
   };
-
+  
   const handleEditTeam = (team: Team) => {
     setModalMode('edit');
     setSelectedTeam(team);
     setModalVisible(true);
   };
-
+  
   const handleViewTeam = (team: Team) => {
     setModalMode('view');
     setSelectedTeam(team);
     setModalVisible(true);
   };
-
+  
   const handleDeleteTeam = (team: Team) => {
     simpleAlertService.showOptions(
       'Eliminar Equipo',
@@ -150,34 +150,59 @@ export default function TeamsScreen({ route, navigation }: Props) {
         { 
           text: 'Eliminar', 
           style: 'destructive',
-          onPress: () => {
-            setTeams(prevTeams => prevTeams.filter(t => t.uid !== team.uid));
+          onPress: async () => {
+            try {
+              await teamService.deleteTeam(team.uid);
+              setTeams(prevTeams => prevTeams.filter(t => t.uid !== team.uid));
+            } catch (error) {
+              console.error('Error deleting team:', error);
+            }
           }
         },
       ]
     );
   };
-
+  
   const handleSaveTeam = (teamData: Omit<Team, 'uid' | 'createdAt'>) => {
     const newTeam: Omit<Team, 'uid'> = {
       ...teamData,
       createdAt: new Date(),
     };
-    // setTeams(prevTeams => [...prevTeams, newTeam]);
+
+    try {
+      teamService.createTeam(newTeam).then(createdTeam => {
+        setTeams(prevTeams => [...prevTeams, createdTeam]);
+        setModalVisible(false);
+      });
+    } catch (error) {
+      console.error("Error creating team:", error);
+    }
   };
 
-  const handleUpdateTeam = (teamUID: string, teamData: Omit<Team, 'uid' | 'managerUID' | 'createdAt'>) => {
-    setTeams(prevTeams => 
-      prevTeams.map(team => 
-        team.uid === teamUID 
-          ? { ...team, ...teamData }
-          : team
-      )
-    );
+  const handleUpdateTeam = async (teamUID: string, teamData: Omit<Team, 'uid' | 'managerUID' | 'createdAt'>) => {
+    try {
+      await teamService.updateTeam(teamUID, teamData);
+      setTeams(prevTeams => 
+        prevTeams.map(team => 
+          team.uid === teamUID 
+            ? { ...team, ...teamData }
+            : team
+        )
+      );
+    }
+    catch (error) {
+      console.error("Error updating team:", error);
+    }
   };
 
-  const handleDeleteTeamFromModal = (teamUID: string) => {
-    setTeams(prevTeams => prevTeams.filter(t => t.uid !== teamUID));
+  const handleDeleteTeamFromModal = async (teamUID: string) => {
+    try {
+      await teamService.deleteTeam(teamUID);
+      setTeams(prevTeams => prevTeams.filter(t => t.uid !== teamUID));
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Error deleting team:', error);
+    }
   };
 
   const closeModal = () => {

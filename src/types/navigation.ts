@@ -39,7 +39,7 @@ export type User = {
 export type Team = {
   uid: string;
   name: string;
-  description: string;
+  description?: string;
   managerUID: string;    // ← QUIÉN creó el equipo (manager)
   memberUIDs: string[];  // ← QUIÉNES están en el equipo (workers)
   createdAt: Date;

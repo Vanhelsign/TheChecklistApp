@@ -33,7 +33,6 @@ export default function LoginScreen({ navigation }: Props) {
       navigation,
       () => {
         if (isSubscribed) {
-          console.log('Auth check complete - showing login screen');
           setChecking(false);
         }
       }

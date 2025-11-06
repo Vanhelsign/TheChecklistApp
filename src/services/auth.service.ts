@@ -32,7 +32,6 @@ class AuthService {
     }
     const data = await getDocs(usersRef);
     const filteredData = data.docs.map((user) => ({...user.data()})).find(x => x.uid === uid);
-    // console.log(filteredData)
     if(filteredData){
       navigation.replace('Home', { 
       userType: filteredData.role,
@@ -110,8 +109,6 @@ class AuthService {
     onCheckComplete: () => void // NEW: Callback when check is done
   ) => {
     return onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed:', user ? 'User logged in' : 'No user');
-      
       if (user) {
         try {
           const data = await getDocs(usersRef);
@@ -127,7 +124,6 @@ class AuthService {
               userTeamUIDs: filteredData.teamUIDs
             });
           } else {
-            console.log('User data not found in Firestore');
             onCheckComplete(); // No user data found, show login
           }
         } catch (error) {

@@ -1,6 +1,6 @@
 import { db } from "../config/firebase.config";
-import { collection, getDocs } from "firebase/firestore";
-import { Team, User } from "../types/navigation";
+import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
+import { Team } from "../types/navigation";
 
 class TeamService {
   getAllTeams = async () => {
@@ -14,6 +14,61 @@ class TeamService {
         memberUIDs: doc.data().memberUIDs || [],
         createdAt: doc.data().createdAt.toDate(),
     })) as Team[];
+  };
+
+  createTeam = async (teamData: Omit<Team, 'uid'>): Promise<Team> => {
+    try {
+      const teamsRef = collection(db, 'teams');
+      
+      // Remove undefined fields before sending to Firestore
+      const cleanedTeamData: Omit<Team, 'uid'> = {
+        name: teamData.name,
+        managerUID: teamData.managerUID,
+        memberUIDs: teamData.memberUIDs || [],
+        createdAt: teamData.createdAt
+      };
+
+      if (teamData.description) {
+        cleanedTeamData.description = teamData.description;
+      }
+
+      const docRef = await addDoc(teamsRef, cleanedTeamData);
+      
+      return {
+        ...cleanedTeamData,
+        uid: docRef.id,
+      } as Team;
+    } catch (error) {
+      console.error('Error creating team:', error);
+      throw error;
+    }
+  };
+
+  deleteTeam = async (teamUID: string): Promise<void> => {
+    try {
+      const docRef = doc(db, 'teams', teamUID);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      throw error;
+    }
+  };
+
+  updateTeam = async (teamUID: string, updatedData: Partial<Team>): Promise<void> => {
+    try {
+      const filteredData: any = {};
+      Object.keys(updatedData).forEach(key => {
+        const value = updatedData[key as keyof Team];
+        if (value !== undefined) {
+          filteredData[key] = value;
+        }
+      });
+      const docRef = doc(db, 'teams', teamUID);
+      await updateDoc(docRef, filteredData);
+    } catch (error) {
+      console.error('Error updating team:', error);
+      throw error;
+    }
   }
 }
 

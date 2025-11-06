@@ -277,13 +277,13 @@ export default function TasksScreen({ route, navigation }: Props) {
       console.error("Error creating task:", error);
     }
   };
-
-  const handleUpdateTask = async (taskId: string, taskData: Omit<Task, 'uid' | 'completed' | 'createdBy' | 'createdAt'>) => {
+  
+  const handleUpdateTask = async (taskUID: string, taskData: Omit<Task, 'uid' | 'completed' | 'createdBy' | 'createdAt'>) => {
     try {
-      await taskService.updateTask(taskId, taskData);
+      await taskService.updateTask(taskUID, taskData);
       setTasks(prevTasks => 
         prevTasks.map(task => 
-          task.uid === taskId 
+          task.uid === taskUID 
             ? { ...task, ...taskData }
             : task
         )
@@ -294,10 +294,10 @@ export default function TasksScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleDeleteTaskFromModal = async (taskId: string) => {
+  const handleDeleteTaskFromModal = async (taskUID: string) => {
     try {
-      await taskService.deleteTask(taskId);
-      setTasks(prevTasks => prevTasks.filter(t => t.uid !== taskId));
+      await taskService.deleteTask(taskUID);
+      setTasks(prevTasks => prevTasks.filter(t => t.uid !== taskUID));
       setModalVisible(false);
     } catch (error) {
       console.error("Error deleting task:", error);
