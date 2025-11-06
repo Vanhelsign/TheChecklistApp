@@ -27,6 +27,7 @@ import taskService from '../services/task.service';
 import userService from '../services/user.service';
 import teamService from '../services/team.service';
 import authService from '../services/auth.service';
+import simpleAlertService from '../services/simpleAlert.service';
 
 type TaskModalMode = 'create' | 'edit' | 'view';
 
@@ -240,11 +241,11 @@ export default function TasksScreen({ route, navigation }: Props) {
   };
 
   const handleDeleteTask = (task: Task) => {
-    Alert.alert(
+    simpleAlertService.showOptions(
       'Eliminar Tarea',
       `¿Estás seguro de que quieres eliminar la tarea "${task.title}"?`,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel', onPress: () => {} },
         { 
           text: 'Eliminar', 
           style: 'destructive',
@@ -307,23 +308,6 @@ export default function TasksScreen({ route, navigation }: Props) {
     setModalVisible(false);
     setSelectedTask(undefined);
   };
-
-  // Show loading state
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.fullScreen}>
-        <LinearGradient 
-          colors={['#ffffff', '#e6f7ff', '#d6f0ff']} 
-          style={[styles.fullScreen, { justifyContent: 'center', alignItems: 'center' }]}
-        >
-          <ActivityIndicator size="large" color="#4A6572" />
-          <Text style={{ marginTop: 10, color: '#7F8C8D', fontSize: 16 }}>
-            Cargando tareas...
-          </Text>
-        </LinearGradient>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.fullScreen}>

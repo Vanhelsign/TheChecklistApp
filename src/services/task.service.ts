@@ -1,5 +1,5 @@
 import { db } from "../config/firebase.config";
-import { addDoc, collection, getDocs } from "firebase/firestore";
+import { addDoc, collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { Priority, Task, User } from "../types/navigation";
 
 class TaskService {
@@ -56,9 +56,32 @@ class TaskService {
     }
   }
 
-  deleteTask = async (taskUID: string): Promise<void> => {}
+  deleteTask = async (taskUID: string): Promise<void> => {
+    try {
+      const docRef = doc(db, 'tasks', taskUID);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      throw error;
+    }
+  }
 
-  updateTask = async (taskUID: string, updatedData: Partial<Task>): Promise<void> => {}
+  updateTask = async (taskUID: string, updatedData: Partial<Task>): Promise<void> => {
+    try {
+      const filteredData: any = {};
+      Object.keys(updatedData).forEach(key => {
+        const value = updatedData[key as keyof Task];
+        if (value !== undefined) {
+          filteredData[key] = value;
+        }
+      });
+      const docRef = doc(db, 'tasks', taskUID);
+      await updateDoc(docRef, filteredData);
+    } catch (error) {
+      console.error('Error updating task:', error);
+      throw error;
+    }
+  }
 }
 
 export default new TaskService();

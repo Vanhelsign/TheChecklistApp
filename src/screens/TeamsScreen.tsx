@@ -23,6 +23,7 @@ import TeamCard from '../components/TeamCard';
 import TeamFormModal from '../components/TeamFormModal';
 import teamService from '../services/team.service';
 import authService from '../services/auth.service';
+import simpleAlertService from '../services/simpleAlert.service';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Teams'>;
 
@@ -141,11 +142,11 @@ export default function TeamsScreen({ route, navigation }: Props) {
   };
 
   const handleDeleteTeam = (team: Team) => {
-    Alert.alert(
+    simpleAlertService.showOptions(
       'Eliminar Equipo',
       `¿Estás seguro de que quieres eliminar el equipo "${team.name}"? Esta acción no se puede deshacer.`,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel', onPress: () => {} },
         { 
           text: 'Eliminar', 
           style: 'destructive',

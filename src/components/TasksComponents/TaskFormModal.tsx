@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Task, Priority } from '../../types/navigation';
 import AssigneeSelector from './AssigneeSelector';
+import simpleAlertService from '../../services/simpleAlert.service';
 
 type TaskModalMode = 'create' | 'edit' | 'view';
 
@@ -128,13 +129,13 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const handleDelete = () => {
     if (!task) return;
 
-    Alert.alert(
+    simpleAlertService.showOptions(
       'Eliminar Tarea',
       `¿Estás seguro de que quieres eliminar la tarea "${task.title}"?`,
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Eliminar', 
+        { text: 'Cancelar', style: 'cancel', onPress: () => {} },
+        {
+          text: 'Eliminar',
           style: 'destructive',
           onPress: () => {
             onDelete?.(task.uid);

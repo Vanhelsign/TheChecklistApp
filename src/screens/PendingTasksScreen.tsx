@@ -74,7 +74,7 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
   const navigateTo = (screenName: keyof RootStackParamList) => {
     setActiveScreen(screenName);
     
-    if (screenName === 'CompletedTasks') {
+    if (screenName === 'PendingTasks') {
       toggleNav();
       return;
     }
@@ -86,11 +86,14 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
       case 'Login':
         navigation.navigate('Login');
         break;
-      case 'PendingTasks':
-        navigation.navigate('PendingTasks', userParams);
+      case 'CompletedTasks':
+        navigation.navigate('CompletedTasks', userParams);
         break;
       case 'Tasks':
         navigation.navigate('Tasks', userParams);
+        break;
+      case 'Teams':
+        navigation.navigate('Teams', userParams);
         break;
       default:
         navigation.navigate(screenName as any);

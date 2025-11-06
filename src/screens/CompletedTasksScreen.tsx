@@ -91,6 +91,9 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
       case 'Tasks':
         navigation.navigate('Tasks', userParams);
         break;
+      case 'Teams':
+        navigation.navigate('Teams', userParams);
+        break;
       default:
         navigation.navigate(screenName as any);
         break;

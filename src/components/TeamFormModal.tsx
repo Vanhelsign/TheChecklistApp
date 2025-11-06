@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Team, TeamModalMode } from '../types/navigation';
 import MemberSelector from './MemberSelector';
+import simpleAlertService from '../services/simpleAlert.service';
 
 type TeamFormModalProps = {
   visible: boolean;
@@ -95,11 +96,11 @@ const TeamFormModal: React.FC<TeamFormModalProps> = ({
   const handleDelete = () => {
     if (!team) return;
 
-    Alert.alert(
+    simpleAlertService.showOptions(
       'Eliminar Equipo',
       `¿Estás seguro de que quieres eliminar el equipo "${team.name}"? Esta acción no se puede deshacer.`,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel', onPress: () => {} },
         { 
           text: 'Eliminar', 
           style: 'destructive',
