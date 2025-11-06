@@ -1,41 +1,44 @@
 import React, { useMemo, useState } from 'react';
 import { 
   View, 
-  Text, 
+  Text,
   StyleSheet, 
   TouchableOpacity, 
   SafeAreaView, 
   ScrollView,
   TextInput,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types/navigation';
+import { RootStackParamList, UserType } from '../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { db } from '../config/firebase.config';
 import { collection } from 'firebase/firestore';
 import authService from '../services/auth.service';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
-export default function LoginScreen({ navigation }: Props) {
+export default function SignupScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState<UserType | ''>('');
 
   const usersRef = useMemo(() => collection(db, 'users'), []);
 
-  const handleLogIn = async () => {
-    await authService.handleLogin(email, password, usersRef, navigation);
+  const handleLogIn = () => {
+    navigation.navigate('Login');
   };
 
-  const handleSignUp = () => {
-    navigation.navigate('Signup');
-  };
+  const handleSignUp = async () => {
+    await authService.handleSignup(email, password, name, role as UserType, usersRef, navigation);
+  }
 
   return (
     <SafeAreaView style={styles.fullScreen}>
       <LinearGradient 
-        colors={['#c7d3eaff', '#6689c5ff', '#5282e3ff']} 
+        colors={['#f7c7c7', '#d05b5b', '#e04b4b']} 
         style={styles.fullScreen}
       >
         <StatusBar style="light" translucent backgroundColor="transparent" />
@@ -48,12 +51,27 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={styles.header}>
             <Text style={styles.welcomeTitle}>Bienvenido</Text>
             <Text style={styles.subtitle}>
-              Inicia sesión para empezar con tus deberes
+              Llena los siguientes datos para crear tu cuenta
             </Text>
           </View>
 
-          {/* Formulario de Login */}
+          {/* Formulario de Signup */}
           <View style={styles.formContainer}>
+            {/* Campo Nombre */}
+            <View style={styles.inputSection}>
+              <Text style={styles.sectionLabel}>Nombre Completo</Text>
+              <View style={styles.inputWrapper}>
+                <View style={styles.checkboxPlaceholder} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Escribe aquí..."
+                  placeholderTextColor="#A0A0A0"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
             {/* Campo Email */}
             <View style={styles.inputSection}>
               <Text style={styles.sectionLabel}>Correo Electrónico</Text>
@@ -89,25 +107,41 @@ export default function LoginScreen({ navigation }: Props) {
               </View>
             </View>
 
-            {/* Enlace Contraseña Olvidada */}
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Contraseña olvidada</Text>
-            </TouchableOpacity>
+            {/* Campo Rol */}
+            <View style={styles.inputSection}>
+              <Text style={styles.sectionLabel}>Rol</Text>
+              <View style={styles.inputWrapper}>
+                <View style={styles.checkboxPlaceholder} />
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={role}
+                    onValueChange={(value: UserType | '') => setRole(value as UserType)}
+                    style={[styles.picker, role ? styles.pickerSelected : styles.pickerPlaceholder]}
+                    dropdownIconColor="#a82a2a"
+                    itemStyle={styles.pickerItem}
+                  >
+                    <Picker.Item label="Selecciona un rol" value="" />
+                    <Picker.Item label="Manager" value="manager" />
+                    <Picker.Item label="Worker" value="worker" />
+                  </Picker>
+                </View>
+              </View>
+            </View>
 
             {/* Separador */}
             <View style={styles.separator} />
 
-            {/* Botón Iniciar Sesión */}
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogIn}>
-              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+            {/* Botón Crear Cuenta */}
+            <TouchableOpacity style={styles.loginButton} onPress={handleSignUp}>
+              <Text style={styles.loginButtonText}>Crear Cuenta</Text>
             </TouchableOpacity>
 
             {/* Enlace Crear Cuenta */}
             <View style={styles.createAccountContainer}>
               <Text style={styles.createAccountText}>
-                ¿Todavía no tienes una cuenta?{' '}
+                ¿Ya tienes una cuenta? {' '}
               </Text>
-              <TouchableOpacity onPress={handleSignUp}>
+              <TouchableOpacity onPress={handleLogIn}>
                 <Text style={styles.createAccountLink}>Haz click aquí</Text>
               </TouchableOpacity>
             </View>
@@ -137,14 +171,14 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#2A5298',
+    color: '#ffffffff',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1f3f75ff',
+    color: '#ffdfdfff',
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: '80%',
@@ -166,7 +200,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2A5298',
+    color: '#a82a2a',
     marginBottom: 8,
   },
   inputWrapper: {
@@ -184,12 +218,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  pickerWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+  },
+  picker: {
+    color: '#333333',
+    width: '100%',
+    borderWidth: 0,
+  },
   checkboxPlaceholder: {
     width: 20,
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#2A5298',
+    borderColor: '#a82a2a',
     marginRight: 12,
   },
   textInput: {
@@ -204,7 +249,7 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: '#2A5298',
+    color: '#a82a2a',
     fontWeight: '500',
   },
   separator: {
@@ -213,12 +258,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   loginButton: {
-    backgroundColor: '#85c8f2ff',
+    backgroundColor: '#f28d8d',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#2A5298',
+    shadowColor: '#a82a2a',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -241,7 +286,7 @@ const styles = StyleSheet.create({
   },
   createAccountLink: {
     fontSize: 14,
-    color: '#2A5298',
+    color: '#a82a2a',
     fontWeight: 'bold',
     textDecorationLine: 'underline',
   },
@@ -258,7 +303,7 @@ const styles = StyleSheet.create({
   roleTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2A5298',
+    color: '#a82a2a',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -275,7 +320,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   userButtonSelected: {
-    backgroundColor: '#85c8f2ff',
+    backgroundColor: '#f28d8d',
   },
   userButtonText: {
     color: '#FFFFFF',
@@ -298,7 +343,17 @@ const styles = StyleSheet.create({
   },
   demoText: {
     fontSize: 12,
-    color: '#E8E8E8',
+    color: '#F2E8E8',
     marginBottom: 4,
+  },
+  pickerPlaceholder: {
+    color: '#9B9B9B',
+  },
+  pickerSelected: {
+    color: '#333333',
+    fontWeight: '600',
+  },
+  pickerItem: {
+    fontSize: 16,
   },
 });

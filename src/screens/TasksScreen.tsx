@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -8,8 +8,7 @@ import {
   SafeAreaView, 
   FlatList,
   Animated,
-  Alert,
-  ActivityIndicator
+  Alert
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, Task, Priority } from '../types/navigation';
@@ -23,28 +22,26 @@ import MenuButton from '../components/MenuButton';
 import TaskFormModal from '../components/TasksComponents/TaskFormModal';
 
 // Datos
-import { taskOperations } from '../database/taskOperations';
-import { userOperations } from '../database/userOperations';
-import { teamOperations } from '../database/teamOperations';
+import { mockTasks } from '../data/mockTasks';
+import { mockUsers } from '../data/users';
+import { mockTeams } from '../data/teams';
 
 type TaskModalMode = 'create' | 'edit' | 'view';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Tasks'>;
 
 // Componente temporal para mostrar tareas (puedes reemplazarlo con tu TaskItem)
-const TaskCard = ({ task, onEdit, onView, onDelete, users, teams }: { 
+const TaskCard = ({ task, onEdit, onView, onDelete }: { 
   task: Task; 
   onEdit: (task: Task) => void;
   onView: (task: Task) => void;
   onDelete: (task: Task) => void;
-  users: any[];
-  teams: any[];
 }) => {
   const assignedTo = task.assignedTo === 'team' 
-    ? teams.find(t => t.id === task.assignedTeamId)?.name
-    : users.find(u => u.id === task.assignedUserId)?.name;
+    ? mockTeams.find(t => t.id === task.assignedTeamId)?.name
+    : mockUsers.find(u => u.id === task.assignedUserId)?.name;
 
-  const createdBy = users.find(u => u.id === task.createdBy)?.name;
+  const createdBy = mockUsers.find(u => u.id === task.createdBy)?.name;
 
   const getPriorityColor = (priority: Priority) => {
     switch (priority) {
@@ -113,42 +110,10 @@ export default function TasksScreen({ route, navigation }: Props) {
   const slideAnim = useState(new Animated.Value(-280))[0];
 
   // Estados para tareas
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<TaskModalMode>('create');
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
-
-  // Cargar datos al montar el componente
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      
-      // Cargar tareas del manager
-      const managerTasks = await taskOperations.getManagerTasks(userId);
-      setTasks(managerTasks);
-
-      // Cargar usuarios para mostrar nombres
-      const allUsers = await userOperations.getAllWorkers();
-      setUsers(allUsers);
-
-      // Cargar equipos para mostrar nombres
-      const allTeams = await teamOperations.getAllTeams();
-      setTeams(allTeams);
-
-    } catch (error) {
-      console.error('Error cargando datos:', error);
-      Alert.alert('Error', 'No se pudieron cargar los datos');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Filtrar tareas creadas por el manager actual
   const managerTasks = tasks.filter(task => task.createdBy === userId);
@@ -237,7 +202,7 @@ export default function TasksScreen({ route, navigation }: Props) {
     setModalVisible(true);
   };
 
-  const handleDeleteTask = async (task: Task) => {
+  const handleDeleteTask = (task: Task) => {
     Alert.alert(
       'Eliminar Tarea',
       `¿Estás seguro de que quieres eliminar la tarea "${task.title}"?`,
@@ -246,70 +211,46 @@ export default function TasksScreen({ route, navigation }: Props) {
         { 
           text: 'Eliminar', 
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await taskOperations.deleteTask(task.id);
-              await loadData(); // Recargar datos
-              Alert.alert('Éxito', 'Tarea eliminada correctamente');
-            } catch (error) {
-              console.error('Error eliminando tarea:', error);
-              Alert.alert('Error', 'No se pudo eliminar la tarea');
-            }
+          onPress: () => {
+            setTasks(prevTasks => prevTasks.filter(t => t.id !== task.id));
           }
         },
       ]
     );
   };
 
-  const handleSaveTask = async (taskData: Omit<Task, 'id' | 'createdAt'>) => {
-    try {
-      await taskOperations.createTask(taskData);
-      await loadData(); // Recargar datos
-      setModalVisible(false);
-      Alert.alert('Éxito', 'Tarea creada correctamente');
-    } catch (error) {
-      console.error('Error creando tarea:', error);
-      Alert.alert('Error', 'No se pudo crear la tarea');
-    }
+  const handleSaveTask = (taskData: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
+    const newTask: Task = {
+      ...taskData,
+      id: Math.max(...tasks.map(t => t.id), 0) + 1,
+      completed: false,
+      createdAt: new Date(),
+    };
+    setTasks(prevTasks => [...prevTasks, newTask]);
   };
 
-  const handleUpdateTask = async (taskId: number, taskData: Omit<Task, 'id' | 'createdBy' | 'createdAt'>) => {
-    try {
-      await taskOperations.updateTask(taskId, taskData);
-      await loadData(); // Recargar datos
-      setModalVisible(false);
-      Alert.alert('Éxito', 'Tarea actualizada correctamente');
-    } catch (error) {
-      console.error('Error actualizando tarea:', error);
-      Alert.alert('Error', 'No se pudo actualizar la tarea');
-    }
+  const handleUpdateTask = (taskId: number, taskData: Omit<Task, 'id' | 'completed' | 'createdBy' | 'createdAt'>) => {
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        task.id === taskId 
+          ? { 
+              ...task, 
+              ...taskData,
+              completed: task.completed // Preservar el estado de completado
+            }
+          : task
+      )
+    );
   };
 
-  const handleDeleteTaskFromModal = async (taskId: number) => {
-    try {
-      await taskOperations.deleteTask(taskId);
-      await loadData(); // Recargar datos
-      setModalVisible(false);
-      Alert.alert('Éxito', 'Tarea eliminada correctamente');
-    } catch (error) {
-      console.error('Error eliminando tarea:', error);
-      Alert.alert('Error', 'No se pudo eliminar la tarea');
-    }
+  const handleDeleteTaskFromModal = (taskId: number) => {
+    setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
   };
 
   const closeModal = () => {
     setModalVisible(false);
     setSelectedTask(undefined);
   };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#5282e3ff" />
-        <Text style={styles.loadingText}>Cargando tareas...</Text>
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.fullScreen}>
@@ -384,8 +325,6 @@ export default function TasksScreen({ route, navigation }: Props) {
                 renderItem={({ item }) => (
                   <TaskCard
                     task={item}
-                    users={users} 
-                    teams={teams} 
                     onEdit={handleEditTask}
                     onView={handleViewTask}
                     onDelete={handleDeleteTask}
@@ -585,26 +524,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#4A6572',
     fontWeight: '500',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#5282e3ff',
-  },
-  completionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  completionText: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
   },
 });
