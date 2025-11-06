@@ -15,6 +15,7 @@ type AssigneeSelectorProps = {
   onTeamChange: (teamId?: string) => void;
   selectedUserUID?: string;
   onUserChange: (userId?: string) => void;
+  disabled?: boolean;
 };
 
 const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
@@ -24,6 +25,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
   onTeamChange,
   selectedUserUID,
   onUserChange,
+  disabled = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
@@ -70,9 +72,11 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
         <TouchableOpacity
           style={[
             styles.typeButton,
-            assigneeType === 'team' && styles.typeButtonSelected
+            assigneeType === 'team' && styles.typeButtonSelected,
+            disabled && styles.disabled,
           ]}
-          onPress={() => onAssigneeTypeChange('team')}
+          onPress={() => !disabled && onAssigneeTypeChange('team')}
+          activeOpacity={disabled ? 1 : 0.7}
         >
           <Ionicons 
             name="people" 
@@ -90,9 +94,11 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
         <TouchableOpacity
           style={[
             styles.typeButton,
-            assigneeType === 'user' && styles.typeButtonSelected
+            assigneeType === 'user' && styles.typeButtonSelected,
+            disabled && styles.disabled,
           ]}
-          onPress={() => onAssigneeTypeChange('user')}
+          onPress={() => !disabled && onAssigneeTypeChange('user')}
+          activeOpacity={disabled ? 1 : 0.7}
         >
           <Ionicons 
             name="person" 
@@ -112,10 +118,11 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#5D8AA8" />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, disabled && styles.disabled]}
           placeholder={`Buscar ${assigneeType === 'team' ? 'equipos' : 'personas'}...`}
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={text => !disabled && setSearchQuery(text)}
+          editable={!disabled}
         />
       </View>
 
@@ -127,9 +134,11 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
               key={team.uid}
               style={[
                 styles.resultItem,
-                selectedTeamUID === team.uid && styles.resultItemSelected
+                selectedTeamUID === team.uid && styles.resultItemSelected,
+                disabled && styles.disabled,
               ]}
-              onPress={() => onTeamChange(team.uid)}
+              onPress={() => !disabled && onTeamChange(team.uid)}
+              activeOpacity={disabled ? 1 : 0.7}
             >
               <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(team.uid, colors) }]}>
                 <Ionicons name="people" size={16} color="#FFFFFF" />
@@ -154,9 +163,11 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
               key={user.uid}
               style={[
                 styles.resultItem,
-                selectedUserUID === user.uid && styles.resultItemSelected
+                selectedUserUID === user.uid && styles.resultItemSelected,
+                disabled && styles.disabled,
               ]}
-              onPress={() => onUserChange(user.uid)}
+              onPress={() => !disabled && onUserChange(user.uid)}
+              activeOpacity={disabled ? 1 : 0.7}
             >
               <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(user.uid, colors) }]}>
                 <Text style={styles.avatarText}>
@@ -289,6 +300,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#B2BEC3',
     fontStyle: 'italic',
+  },
+  disabled: {
+    opacity: 0.6,
   },
 });
 

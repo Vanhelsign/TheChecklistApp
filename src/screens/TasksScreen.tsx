@@ -3,13 +3,10 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  ScrollView, 
   TouchableOpacity, 
   SafeAreaView, 
   FlatList,
-  Animated,
-  Alert,
-  ActivityIndicator
+  Animated
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, Task, Priority, User, Team } from '../types/navigation';
@@ -262,10 +259,9 @@ export default function TasksScreen({ route, navigation }: Props) {
     );
   };
 
-  const handleSaveTask = async (taskData: Omit<Task, 'uid' | 'completed' | 'createdAt'>) => {
+  const handleSaveTask = async (taskData: Omit<Task, 'uid' | 'createdAt'>) => {
     const newTask: Omit<Task, 'uid'> = {
       ...taskData,
-      completed: false,
       createdAt: new Date(),
     };
     
@@ -278,7 +274,7 @@ export default function TasksScreen({ route, navigation }: Props) {
     }
   };
   
-  const handleUpdateTask = async (taskUID: string, taskData: Omit<Task, 'uid' | 'completed' | 'createdBy' | 'createdAt'>) => {
+  const handleUpdateTask = async (taskUID: string, taskData: Omit<Task, 'uid' | 'createdBy' | 'createdAt'>) => {
     try {
       await taskService.updateTask(taskUID, taskData);
       setTasks(prevTasks => 

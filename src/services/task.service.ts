@@ -1,5 +1,5 @@
 import { db } from "../config/firebase.config";
-import { addDoc, collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { addDoc, collection, getDocs, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { Priority, Task, User } from "../types/navigation";
 
 class TaskService {
@@ -13,6 +13,7 @@ class TaskService {
       dueDate: doc.data().dueDate.toDate(),
       priority: doc.data().priority as Priority,
       completed: doc.data().completed,
+      checklistItems: doc.data().checklistItems ?? [],
       createdAt: doc.data().createdAt.toDate(),
       assignedTo: doc.data().assignedTo as 'team' | 'user',
       assignedTeamUID: doc.data().assignedTeamUID,
@@ -24,15 +25,16 @@ class TaskService {
   createTask = async (taskData: Omit<Task, 'uid'>): Promise<Task> => {
     try {
       const tasksRef = collection(db, 'tasks');
-      
-      // Remove undefined fields before sending to Firestore
-      const cleanedTaskData: Omit<Task, 'uid'> = {
+      // Remove undefined fields before sending to Firestore and sanitize nested checklist items
+      const cleanedTaskData: any = {
         title: taskData.title,
         description: taskData.description,
         dueDate: taskData.dueDate,
         priority: taskData.priority,
         completed: taskData.completed,
-        createdAt: taskData.createdAt,
+        checklistItems: taskData.checklistItems ?? [],
+        // Ensure createdAt exists (avoid undefined which Firestore rejects)
+        createdAt: taskData.createdAt ?? new Date(),
         assignedTo: taskData.assignedTo,
         createdBy: taskData.createdBy
       };
@@ -42,6 +44,20 @@ class TaskService {
       }
       if (taskData.assignedUserUID) {
         cleanedTaskData.assignedUserUID = taskData.assignedUserUID;
+      }
+
+      // sanitize checklist item objects (remove undefined and NaN fields)
+      if (Array.isArray(cleanedTaskData.checklistItems)) {
+        cleanedTaskData.checklistItems = cleanedTaskData.checklistItems.map((it: any) => {
+          const out: any = {};
+          Object.keys(it || {}).forEach(k => {
+            const v = it[k];
+            if (v === undefined) return;
+            if (typeof v === 'number' && Number.isNaN(v)) return;
+            out[k] = v;
+          });
+          return out;
+        });
       }
 
       const docRef = await addDoc(tasksRef, cleanedTaskData);
@@ -75,10 +91,63 @@ class TaskService {
           filteredData[key] = value;
         }
       });
+
+      // If checklistItems is provided, sanitize nested items
+      if (Array.isArray(filteredData.checklistItems)) {
+        filteredData.checklistItems = filteredData.checklistItems.map((it: any) => {
+          const out: any = {};
+          Object.keys(it || {}).forEach(k => {
+            const v = it[k];
+            if (v === undefined) return;
+            if (typeof v === 'number' && Number.isNaN(v)) return;
+            out[k] = v;
+          });
+          return out;
+        });
+      }
       const docRef = doc(db, 'tasks', taskUID);
       await updateDoc(docRef, filteredData);
     } catch (error) {
       console.error('Error updating task:', error);
+      throw error;
+    }
+  }
+
+  addChecklistItem = async (taskUID: string, item: any): Promise<void> => {
+    try {
+      const docRef = doc(db, 'tasks', taskUID);
+      // Clean the item before sending so Firestore stores a predictable object
+      const cleanedItem: any = {};
+      Object.keys(item).forEach(key => {
+        const val = item[key];
+        if (val === undefined) return;
+        // drop NaN values
+        if (typeof val === 'number' && Number.isNaN(val)) return;
+        cleanedItem[key] = val;
+      });
+
+      await updateDoc(docRef, { checklistItems: arrayUnion(cleanedItem) });
+    } catch (error) {
+      console.error('Error adding checklist item:', error);
+      throw error;
+    }
+  }
+
+  removeChecklistItem = async (taskUID: string, item: any): Promise<void> => {
+    try {
+      const docRef = doc(db, 'tasks', taskUID);
+      // When removing, the object must match exactly what's stored. Remove undefined/NaN
+      const cleanedItem: any = {};
+      Object.keys(item).forEach(key => {
+        const val = item[key];
+        if (val === undefined) return;
+        if (typeof val === 'number' && Number.isNaN(val)) return;
+        cleanedItem[key] = val;
+      });
+
+      await updateDoc(docRef, { checklistItems: arrayRemove(cleanedItem) });
+    } catch (error) {
+      console.error('Error removing checklist item:', error);
       throw error;
     }
   }

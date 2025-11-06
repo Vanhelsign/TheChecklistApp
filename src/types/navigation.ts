@@ -25,7 +25,26 @@ export type Task = {
   assignedTeamUID?: string; // ID del equipo asignado (si assignedTo === 'team')
   assignedUserUID?: string; // ID del usuario asignado (si assignedTo === 'user')
   createdBy: string; // ID del manager que creó la tarea
+  checklistItems?: CheckListItem[];
 };
+
+export type CheckListItem = {
+  id: string;
+  text: string;
+  type: CheckListItemTypes;
+  completed: boolean;
+  value?: string;
+  numberValue?: number;
+  fileUri?: string;
+  signatureUri?: string;
+}
+
+export type CheckListItemTypes = 'checkbox' | 'textInput' | 'numberInput' | 'fileUpload' | 'signUpload';
+
+export const TaskStatus = {
+  Pending: false,
+  Completed: true
+}
 
 export type User = {
   uid: string;
