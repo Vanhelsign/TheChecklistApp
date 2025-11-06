@@ -13,25 +13,24 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Team, TeamModalMode } from '../types/navigation';
-import { mockUsers } from '../data/users';
 import MemberSelector from './MemberSelector';
 
 type TeamFormModalProps = {
   visible: boolean;
   mode: TeamModalMode;
   team?: Team;
-  currentUserId: number;
-  onSave: (teamData: Omit<Team, 'id' | 'createdAt'>) => void;
-  onUpdate: (teamId: number, teamData: Omit<Team, 'id' | 'managerId' | 'createdAt'>) => void;
+  currentUserUID: string;
+  onSave: (teamData: Omit<Team, 'uid' | 'createdAt'>) => void;
+  onUpdate: (teamId: string, teamData: Omit<Team, 'uid' | 'managerUID' | 'createdAt'>) => void;
   onClose: () => void;
-  onDelete?: (teamId: number) => void;
+  onDelete?: (teamId: string) => void;
 };
 
 const TeamFormModal: React.FC<TeamFormModalProps> = ({
   visible,
   mode,
   team,
-  currentUserId,
+  currentUserUID,
   onSave,
   onUpdate,
   onClose,
@@ -39,7 +38,7 @@ const TeamFormModal: React.FC<TeamFormModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ name?: string; members?: string }>({});
 
   // Reset form cuando se abre/cierra el modal o cambia el equipo
@@ -48,7 +47,7 @@ const TeamFormModal: React.FC<TeamFormModalProps> = ({
       if (mode === 'edit' || mode === 'view') {
         setName(team?.name || '');
         setDescription(team?.description || '');
-        setSelectedMemberIds(team?.memberIds || []);
+        setSelectedMemberIds(team?.memberUIDs || []);
       } else {
         // Modo create - reset form
         setName('');
@@ -80,14 +79,14 @@ const TeamFormModal: React.FC<TeamFormModalProps> = ({
     const teamData = {
       name: name.trim(),
       description: description.trim(),
-      managerId: currentUserId,
-      memberIds: selectedMemberIds,
+      managerUID: currentUserUID,
+      memberUIDs: selectedMemberIds,
     };
 
     if (mode === 'create') {
       onSave(teamData);
     } else if (mode === 'edit' && team) {
-      onUpdate(team.id, teamData);
+      onUpdate(team.uid, teamData);
     }
 
     onClose();
@@ -105,7 +104,7 @@ const TeamFormModal: React.FC<TeamFormModalProps> = ({
           text: 'Eliminar', 
           style: 'destructive',
           onPress: () => {
-            onDelete?.(team.id);
+            onDelete?.(team.uid);
             onClose();
           }
         },

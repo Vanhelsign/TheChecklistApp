@@ -121,8 +121,8 @@ export default function SignupScreen({ navigation }: Props) {
                     itemStyle={styles.pickerItem}
                   >
                     <Picker.Item label="Selecciona un rol" value="" />
-                    <Picker.Item label="Manager" value="manager" />
-                    <Picker.Item label="Worker" value="worker" />
+                    <Picker.Item label="Gerente" value="manager" />
+                    <Picker.Item label="Trabajador" value="worker" />
                   </Picker>
                 </View>
               </View>

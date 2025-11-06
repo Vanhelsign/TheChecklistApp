@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -21,15 +21,12 @@ import SideNavbar from '../components/SideNavbar';
 import MenuButton from '../components/MenuButton';
 import TeamCard from '../components/TeamCard';
 import TeamFormModal from '../components/TeamFormModal';
-
-// Datos
-import { mockTeams } from '../data/teams';
-import { mockUsers } from '../data/users';
+import teamService from '../services/team.service';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Teams'>;
 
 export default function TeamsScreen({ route, navigation }: Props) {
-  const { userType, userId, userName, userTeamIds } = route.params;
+  const { userType, userUID, userName, userTeamUIDs } = route.params;
 
   // Estados para la navbar
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -37,13 +34,26 @@ export default function TeamsScreen({ route, navigation }: Props) {
   const slideAnim = useState(new Animated.Value(-280))[0];
 
   // Estados para equipos
-  const [teams, setTeams] = useState<Team[]>(mockTeams);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<TeamModalMode>('create');
   const [selectedTeam, setSelectedTeam] = useState<Team | undefined>(undefined);
 
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const fetchedTeams = await teamService.getAllTeams();
+        setTeams(fetchedTeams);
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+      }
+    };
+
+    fetchTeams();
+  }, []);
+
   // Filtrar equipos del manager actual
-  const managerTeams = teams.filter(team => team.managerId === userId);
+  const managerTeams = teams.filter(team => team.managerUID === userUID);
 
   // Funciones de navegación
   const toggleNav = () => {
@@ -73,9 +83,9 @@ export default function TeamsScreen({ route, navigation }: Props) {
 
     const userParams = {
       userType: userType,
-      userId: userId,
+      userUID: userUID,
       userName: userName,
-      userTeamIds: userTeamIds
+      userTeamUIDs: userTeamUIDs
     };
 
     switch (screenName) {
@@ -139,34 +149,33 @@ export default function TeamsScreen({ route, navigation }: Props) {
           text: 'Eliminar', 
           style: 'destructive',
           onPress: () => {
-            setTeams(prevTeams => prevTeams.filter(t => t.id !== team.id));
+            setTeams(prevTeams => prevTeams.filter(t => t.uid !== team.uid));
           }
         },
       ]
     );
   };
 
-  const handleSaveTeam = (teamData: Omit<Team, 'id' | 'createdAt'>) => {
-    const newTeam: Team = {
+  const handleSaveTeam = (teamData: Omit<Team, 'uid' | 'createdAt'>) => {
+    const newTeam: Omit<Team, 'uid'> = {
       ...teamData,
-      id: Math.max(...teams.map(t => t.id), 0) + 1, // Generar nuevo ID
       createdAt: new Date(),
     };
-    setTeams(prevTeams => [...prevTeams, newTeam]);
+    // setTeams(prevTeams => [...prevTeams, newTeam]);
   };
 
-  const handleUpdateTeam = (teamId: number, teamData: Omit<Team, 'id' | 'managerId' | 'createdAt'>) => {
+  const handleUpdateTeam = (teamUID: string, teamData: Omit<Team, 'uid' | 'managerUID' | 'createdAt'>) => {
     setTeams(prevTeams => 
       prevTeams.map(team => 
-        team.id === teamId 
+        team.uid === teamUID 
           ? { ...team, ...teamData }
           : team
       )
     );
   };
 
-  const handleDeleteTeamFromModal = (teamId: number) => {
-    setTeams(prevTeams => prevTeams.filter(t => t.id !== teamId));
+  const handleDeleteTeamFromModal = (teamUID: string) => {
+    setTeams(prevTeams => prevTeams.filter(t => t.uid !== teamUID));
   };
 
   const closeModal = () => {
@@ -264,14 +273,14 @@ export default function TeamsScreen({ route, navigation }: Props) {
             ) : (
               <FlatList
                 data={managerTeams}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.uid}
                 renderItem={({ item }) => (
                   <TeamCard
                     team={item}
                     onEdit={handleEditTeam}
                     onView={handleViewTeam}
                     onDelete={handleDeleteTeam}
-                    isOwner={item.managerId === userId}
+                    isOwner={item.managerUID === userUID}
                   />
                 )}
                 showsVerticalScrollIndicator={false}
@@ -286,7 +295,7 @@ export default function TeamsScreen({ route, navigation }: Props) {
           visible={modalVisible}
           mode={modalMode}
           team={selectedTeam}
-          currentUserId={userId}
+          currentUserUID={userUID}
           onSave={handleSaveTeam}
           onUpdate={handleUpdateTeam}
           onClose={closeModal}

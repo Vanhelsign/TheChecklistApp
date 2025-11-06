@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { mockUsers } from '../data/users';
-import { UserType } from '../types/navigation';
+import miscService from '../services/misc.service';
+import userService from '../services/user.service';
+import { User } from '../types/navigation';
 
 type MemberSelectorProps = {
-  selectedMemberIds: number[];
-  onMembersChange: (memberIds: number[]) => void;
+  selectedMemberIds: string[];
+  onMembersChange: (memberIds: string[]) => void;
   disabled?: boolean;
 };
 
@@ -15,14 +16,22 @@ const MemberSelector: React.FC<MemberSelectorProps> = ({
   onMembersChange,
   disabled = false
 }) => {
-  const workers = mockUsers.filter(user => user.role === 'worker');
+  const [workers, setWorkers] = React.useState<User[]>([]);
 
-  const toggleMember = (memberId: number) => {
+  useEffect(() => {
+    const fetchData = async () => {
+      const fetchedWorkers = await userService.getUsersByRole('worker');
+      setWorkers(fetchedWorkers);
+    };
+    fetchData();
+  }, []);
+
+  const toggleMember = (memberId: string) => {
     if (disabled) return;
     
     const isSelected = selectedMemberIds.includes(memberId);
-    let newSelectedMembers: number[];
-    
+    let newSelectedMembers: string[];
+
     if (isSelected) {
       newSelectedMembers = selectedMemberIds.filter(id => id !== memberId);
     } else {
@@ -32,10 +41,7 @@ const MemberSelector: React.FC<MemberSelectorProps> = ({
     onMembersChange(newSelectedMembers);
   };
 
-  const getAvatarColor = (userId: number) => {
-    const colors = ['#4A6572', '#344955', '#5D8AA8', '#7F8C8D', '#B2BEC3'];
-    return colors[userId % colors.length];
-  };
+  const colors = ['#4A6572', '#344955', '#5D8AA8', '#7F8C8D', '#B2BEC3'];
 
   return (
     <View style={styles.container}>
@@ -50,16 +56,16 @@ const MemberSelector: React.FC<MemberSelectorProps> = ({
       <ScrollView style={styles.membersList} showsVerticalScrollIndicator={false}>
         {workers.map((worker) => (
           <TouchableOpacity
-            key={worker.id}
+            key={worker.uid}
             style={[
               styles.memberItem,
-              selectedMemberIds.includes(worker.id) && styles.memberItemSelected,
+              selectedMemberIds.includes(worker.uid) && styles.memberItemSelected,
               disabled && styles.memberItemDisabled
             ]}
-            onPress={() => toggleMember(worker.id)}
+            onPress={() => toggleMember(worker.uid)}
             disabled={disabled}
           >
-            <View style={[styles.avatar, { backgroundColor: getAvatarColor(worker.id) }]}>
+            <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(worker.uid, colors) }]}>
               <Text style={styles.avatarText}>
                 {worker.name.split(' ').map(n => n[0]).join('')}
               </Text>
@@ -68,13 +74,13 @@ const MemberSelector: React.FC<MemberSelectorProps> = ({
             <View style={styles.memberInfo}>
               <Text style={styles.memberName}>{worker.name}</Text>
               <Text style={styles.memberEmail}>{worker.email}</Text>
-              <Text style={styles.memberId}>ID: {worker.id}</Text>
+              <Text style={styles.memberId}>ID: {worker.uid}</Text>
             </View>
             
             <Ionicons 
-              name={selectedMemberIds.includes(worker.id) ? "checkbox" : "square-outline"} 
+              name={selectedMemberIds.includes(worker.uid) ? "checkbox" : "square-outline"} 
               size={24} 
-              color={selectedMemberIds.includes(worker.id) ? '#4A6572' : '#B2BEC3'} 
+              color={selectedMemberIds.includes(worker.uid) ? '#4A6572' : '#B2BEC3'} 
             />
           </TouchableOpacity>
         ))}

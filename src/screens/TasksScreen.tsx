@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -8,10 +8,11 @@ import {
   SafeAreaView, 
   FlatList,
   Animated,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList, Task, Priority } from '../types/navigation';
+import { RootStackParamList, Task, Priority, User, Team } from '../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,26 +23,35 @@ import MenuButton from '../components/MenuButton';
 import TaskFormModal from '../components/TasksComponents/TaskFormModal';
 
 // Datos
-import { mockTasks } from '../data/mockTasks';
-import { mockUsers } from '../data/users';
-import { mockTeams } from '../data/teams';
+import taskService from '../services/task.service';
+import userService from '../services/user.service';
+import teamService from '../services/team.service';
 
 type TaskModalMode = 'create' | 'edit' | 'view';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Tasks'>;
 
-// Componente temporal para mostrar tareas (puedes reemplazarlo con tu TaskItem)
-const TaskCard = ({ task, onEdit, onView, onDelete }: { 
+// TaskCard ahora recibe users como prop
+const TaskCard = ({ 
+  task, 
+  users,
+  teams,
+  onEdit, 
+  onView, 
+  onDelete 
+}: { 
   task: Task; 
+  users: User[];
+  teams: Team[];
   onEdit: (task: Task) => void;
   onView: (task: Task) => void;
   onDelete: (task: Task) => void;
 }) => {
   const assignedTo = task.assignedTo === 'team' 
-    ? mockTeams.find(t => t.id === task.assignedTeamId)?.name
-    : mockUsers.find(u => u.id === task.assignedUserId)?.name;
-
-  const createdBy = mockUsers.find(u => u.id === task.createdBy)?.name;
+    ? teams.find(t => t.uid === task.assignedTeamUID)?.name
+    : users.find(u => u.uid === task.assignedUserUID)?.name;
+  
+  const createdBy = users.find(u => u.uid === task.createdBy)?.name;
 
   const getPriorityColor = (priority: Priority) => {
     switch (priority) {
@@ -63,7 +73,7 @@ const TaskCard = ({ task, onEdit, onView, onDelete }: {
               Asignada a: {assignedTo || 'No asignada'}
             </Text>
             <Text style={styles.taskMetaText}>
-              • Creada por: {createdBy}
+              • Creada por: {createdBy || 'Desconocido'}
             </Text>
           </View>
         </View>
@@ -102,7 +112,7 @@ const TaskCard = ({ task, onEdit, onView, onDelete }: {
 };
 
 export default function TasksScreen({ route, navigation }: Props) {
-  const { userType, userId, userName, userTeamIds } = route.params;
+  const { userType, userUID, userName, userTeamUIDs } = route.params;
 
   // Estados para la navbar
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -110,13 +120,39 @@ export default function TasksScreen({ route, navigation }: Props) {
   const slideAnim = useState(new Animated.Value(-280))[0];
 
   // Estados para tareas
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<TaskModalMode>('create');
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
 
+  // Fetch tasks AND users ONCE when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [fetchedTasks, fetchedUsers, fetchedTeams] = await Promise.all([
+          taskService.getAllTasks(),
+          userService.getAllUsers(),
+          teamService.getAllTeams()
+        ]);
+        setTasks(fetchedTasks);
+        setUsers(fetchedUsers);
+        setTeams(fetchedTeams);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
   // Filtrar tareas creadas por el manager actual
-  const managerTasks = tasks.filter(task => task.createdBy === userId);
+  const managerTasks = tasks.filter(task => task.createdBy === userUID);
 
   // Funciones de navegación
   const toggleNav = () => {
@@ -146,9 +182,9 @@ export default function TasksScreen({ route, navigation }: Props) {
 
     const userParams = {
       userType: userType,
-      userId: userId,
+      userUID: userUID,
       userName: userName,
-      userTeamIds: userTeamIds
+      userTeamUIDs: userTeamUIDs
     };
 
     switch (screenName) {
@@ -211,46 +247,82 @@ export default function TasksScreen({ route, navigation }: Props) {
         { 
           text: 'Eliminar', 
           style: 'destructive',
-          onPress: () => {
-            setTasks(prevTasks => prevTasks.filter(t => t.id !== task.id));
+          onPress: async () => {
+            try {
+              await taskService.deleteTask(task.uid);
+              setTasks(prevTasks => prevTasks.filter(t => t.uid !== task.uid));
+            } catch (error) {
+              console.error("Error deleting task:", error);
+            }
           }
         },
       ]
     );
   };
 
-  const handleSaveTask = (taskData: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
-    const newTask: Task = {
+  const handleSaveTask = async (taskData: Omit<Task, 'uid' | 'completed' | 'createdAt'>) => {
+    const newTask: Omit<Task, 'uid'> = {
       ...taskData,
-      id: Math.max(...tasks.map(t => t.id), 0) + 1,
       completed: false,
       createdAt: new Date(),
     };
-    setTasks(prevTasks => [...prevTasks, newTask]);
+    
+    try {
+      const createdTask = await taskService.createTask(newTask);
+      setTasks(prevTasks => [...prevTasks, createdTask]);
+      setModalVisible(false);
+    } catch (error) {
+      console.error("Error creating task:", error);
+    }
   };
 
-  const handleUpdateTask = (taskId: number, taskData: Omit<Task, 'id' | 'completed' | 'createdBy' | 'createdAt'>) => {
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.id === taskId 
-          ? { 
-              ...task, 
-              ...taskData,
-              completed: task.completed // Preservar el estado de completado
-            }
-          : task
-      )
-    );
+  const handleUpdateTask = async (taskId: string, taskData: Omit<Task, 'uid' | 'completed' | 'createdBy' | 'createdAt'>) => {
+    try {
+      await taskService.updateTask(taskId, taskData);
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.uid === taskId 
+            ? { ...task, ...taskData }
+            : task
+        )
+      );
+      setModalVisible(false);
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
   };
 
-  const handleDeleteTaskFromModal = (taskId: number) => {
-    setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
+  const handleDeleteTaskFromModal = async (taskId: string) => {
+    try {
+      await taskService.deleteTask(taskId);
+      setTasks(prevTasks => prevTasks.filter(t => t.uid !== taskId));
+      setModalVisible(false);
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
   };
 
   const closeModal = () => {
     setModalVisible(false);
     setSelectedTask(undefined);
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.fullScreen}>
+        <LinearGradient 
+          colors={['#ffffff', '#e6f7ff', '#d6f0ff']} 
+          style={[styles.fullScreen, { justifyContent: 'center', alignItems: 'center' }]}
+        >
+          <ActivityIndicator size="large" color="#4A6572" />
+          <Text style={{ marginTop: 10, color: '#7F8C8D', fontSize: 16 }}>
+            Cargando tareas...
+          </Text>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.fullScreen}>
@@ -321,10 +393,12 @@ export default function TasksScreen({ route, navigation }: Props) {
             ) : (
               <FlatList
                 data={managerTasks}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.uid}
                 renderItem={({ item }) => (
                   <TaskCard
                     task={item}
+                    users={users}
+                    teams={teams}
                     onEdit={handleEditTask}
                     onView={handleViewTask}
                     onDelete={handleDeleteTask}
@@ -342,7 +416,7 @@ export default function TasksScreen({ route, navigation }: Props) {
           visible={modalVisible}
           mode={modalMode}
           task={selectedTask}
-          currentUserId={userId}
+          currentUserUID={userUID}
           onSave={handleSaveTask}
           onUpdate={handleUpdateTask}
           onClose={closeModal}

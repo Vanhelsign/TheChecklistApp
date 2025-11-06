@@ -1,45 +1,55 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import { 
   View, 
   FlatList, 
   Text, 
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   SafeAreaView,
   Animated
 } from 'react-native';
-import { mockTasks } from '../data/mockTasks';
 import TaskItem from '../components/TaskItem';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList, UserType, Task } from '../types/navigation';
+import { RootStackParamList, Task } from '../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
 import SideNavbar from '../components/SideNavbar';
 import MenuButton from '../components/MenuButton';
+import taskService from '../services/task.service';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CompletedTasks'>;
 
 export default function CompletedTasksScreen({ route, navigation }: Props) {
 
-  const { userType, userId, userName, userTeamIds } = route.params;
+  const { userType, userUID, userName, userTeamUIDs } = route.params;
 
   const userParams = {
     userType: userType,
-    userId: userId,
+    userUID: userUID,
     userName: userName,
-    userTeamIds: userTeamIds
+    userTeamUIDs: userTeamUIDs
   };
 
   // Estados para la navbar
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState('CompletedTasks');
+  const [tasks, setTasks] = useState<Task[]>([]);
   const slideAnim = useState(new Animated.Value(-280))[0];
 
+  useEffect(() => {
+    const fetchTasks = async () => {
+      const allTasks = await taskService.getAllTasks();
+      const filteredTasks = allTasks.filter(task => !task.completed);
+      setTasks(filteredTasks);
+    };
+    
+    fetchTasks();
+  }, []);
+  
   // Filtrar tareas completadas
-  const completedTasks = mockTasks.filter(task => task.completed);
+  const completedTasks = tasks.filter(task => task.completed);
 
   // Funciones de navegación (igual que en las otras pantallas)
   const toggleNav = () => {
@@ -168,7 +178,7 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
             ) : (
               <FlatList
                 data={completedTasks}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.uid}
                 renderItem={({ item }) => <TaskItem task={item} />}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}

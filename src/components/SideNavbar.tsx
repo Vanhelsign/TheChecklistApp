@@ -82,7 +82,7 @@ const SideNavbar: React.FC<SideNavbarProps> = ({
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          {userType === 'manager' && (<TouchableOpacity
             style={[
               styles.navItem,
               activeScreen === 'Tasks' && styles.navItemActive
@@ -101,7 +101,7 @@ const SideNavbar: React.FC<SideNavbarProps> = ({
             ]}>
               Tareas
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity>)}
 
           <TouchableOpacity 
             style={[
