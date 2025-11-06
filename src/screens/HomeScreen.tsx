@@ -72,7 +72,7 @@ export default function HomeScreen({ route, navigation }: Props) {
 
   const getWelcomeMessage = () => {
     const role = userType === 'manager' ? 'Gerente' : 'Trabajador';
-    return `Bienvenido, ${role}`;
+    return `Bienvenido, ${userName}`;
   };
 
   const getRoleColor = () => {

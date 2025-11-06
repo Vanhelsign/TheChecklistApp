@@ -26,6 +26,7 @@ import TaskFormModal from '../components/TasksComponents/TaskFormModal';
 import taskService from '../services/task.service';
 import userService from '../services/user.service';
 import teamService from '../services/team.service';
+import authService from '../services/auth.service';
 
 type TaskModalMode = 'create' | 'edit' | 'view';
 
@@ -212,7 +213,7 @@ export default function TasksScreen({ route, navigation }: Props) {
   };
 
   const handleLogout = () => {
-    navigation.replace('Login');
+    authService.handleLogout(navigation);
   };
 
   const getRoleColor = () => {

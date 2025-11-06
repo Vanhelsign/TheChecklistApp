@@ -22,6 +22,7 @@ import MenuButton from '../components/MenuButton';
 import TeamCard from '../components/TeamCard';
 import TeamFormModal from '../components/TeamFormModal';
 import teamService from '../services/team.service';
+import authService from '../services/auth.service';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Teams'>;
 
@@ -113,7 +114,7 @@ export default function TeamsScreen({ route, navigation }: Props) {
   };
 
   const handleLogout = () => {
-    navigation.replace('Login');
+    authService.handleLogout(navigation);
   };
 
   const getRoleColor = () => {

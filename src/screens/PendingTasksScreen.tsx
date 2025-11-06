@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import SideNavbar from '../components/SideNavbar';
 import MenuButton from '../components/MenuButton';
 import taskService from '../services/task.service';
+import authService from '../services/auth.service';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PendingTasks'>;
 
@@ -100,7 +101,7 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
   };
 
   const handleLogout = () => {
-    navigation.replace('Login');
+    authService.handleLogout(navigation);
   };
 
   const getRoleColor = () => {
