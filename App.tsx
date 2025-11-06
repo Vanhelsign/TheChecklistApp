@@ -8,6 +8,7 @@ import PendingTasksScreen from './src/screens/PendingTasksScreen';
 import CompletedTasksScreen from './src/screens/CompletedTasksScreen';
 import TasksScreen from './src/screens/TasksScreen';
 import TeamsScreen from './src/screens/TeamsScreen';
+import SignupScreen from './src/screens/SignupScreen';
 
 import { RootStackParamList } from './src/types/navigation';
 import { StatusBar } from 'expo-status-bar';
@@ -37,6 +38,12 @@ export default function App() {
         <Stack.Screen
           name="Login"
           component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen
+          name="Signup"
+          component={SignupScreen}
           options={{ headerShown: false }}
         />
 

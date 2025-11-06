@@ -47,6 +47,7 @@ export type Team = {
 
 export type RootStackParamList = {
   Login: undefined;
+  Signup: undefined;
   Home: UserParams;
   PendingTasks: UserParams;
   CompletedTasks: UserParams;
