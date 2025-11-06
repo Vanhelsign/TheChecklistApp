@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../config/firebase.config";
 import simpleAlertService from "./simpleAlert.service";
 import { addDoc, CollectionReference, DocumentData, getDocs } from "firebase/firestore";
@@ -32,7 +32,7 @@ class AuthService {
     }
     const data = await getDocs(usersRef);
     const filteredData = data.docs.map((user) => ({...user.data()})).find(x => x.uid === uid);
-    console.log(filteredData)
+    // console.log(filteredData)
     if(filteredData){
       navigation.replace('Home', { 
       userType: filteredData.role,
@@ -102,6 +102,43 @@ class AuthService {
         simpleAlertService.showError("Error al cerrar sesión");
         console.error(err);
       });
+  }
+
+  verifyIfLoggedIn = (
+    usersRef: CollectionReference<DocumentData>, 
+    navigation: NativeStackNavigationProp<any>,
+    onCheckComplete: () => void // NEW: Callback when check is done
+  ) => {
+    return onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user ? 'User logged in' : 'No user');
+      
+      if (user) {
+        try {
+          const data = await getDocs(usersRef);
+          const filteredData = data.docs
+            .map((doc) => ({ ...doc.data() }))
+            .find(x => x.uid === user.uid);
+          
+          if (filteredData) {
+            navigation.replace('Home', { 
+              userType: filteredData.role,
+              userUID: filteredData.uid,
+              userName: filteredData.name,
+              userTeamUIDs: filteredData.teamUIDs
+            });
+          } else {
+            console.log('User data not found in Firestore');
+            onCheckComplete(); // No user data found, show login
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          onCheckComplete(); // Error occurred, show login
+        }
+      } else {
+        // No user logged in, show login screen
+        onCheckComplete();
+      }
+    });
   }
 }
 
