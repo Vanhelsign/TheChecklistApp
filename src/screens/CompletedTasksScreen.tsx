@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import TaskItem from '../components/TaskItem';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList, Task } from '../types/navigation';
+import { RootStackParamList, Task, Team, User } from '../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,8 @@ import SideNavbar from '../components/SideNavbar';
 import MenuButton from '../components/MenuButton';
 import taskService from '../services/task.service';
 import authService from '../services/auth.service';
+import userService from '../services/user.service';
+import teamService from '../services/team.service';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CompletedTasks'>;
 
@@ -37,20 +39,25 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState('CompletedTasks');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const slideAnim = useState(new Animated.Value(-280))[0];
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      const allTasks = await taskService.getAllTasks();
-      const filteredTasks = allTasks.filter(task => !task.completed);
+    const fetchData = async () => {
+      const [fetchedTasks, fetchedUsers, fetchedTeams] = await Promise.all([
+        taskService.getAllTasks(),
+        userService.getAllUsers(),
+        teamService.getAllTeams()
+      ]);
+      const filteredTasks = fetchedTasks.filter(task => task.completed);
       setTasks(filteredTasks);
+      setUsers(fetchedUsers);
+      setTeams(fetchedTeams);
     };
     
-    fetchTasks();
+    fetchData();
   }, []);
-  
-  // Filtrar tareas completadas
-  const completedTasks = tasks.filter(task => task.completed);
 
   // Funciones de navegación (igual que en las otras pantallas)
   const toggleNav = () => {
@@ -162,16 +169,16 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
               Tareas Completadas
             </Text>
             <Text style={styles.subtitle}>
-              {completedTasks.length === 0 
+              {tasks.length === 0 
                 ? 'No hay tareas completadas' 
-                : `Has completado ${completedTasks.length} tarea${completedTasks.length !== 1 ? 's' : ''}`
+                : `Has completado ${tasks.length} tarea${tasks.length !== 1 ? 's' : ''}`
               }
             </Text>
           </View>
 
           {/* Lista de Tareas Completadas */}
           <View style={styles.container}>
-            {completedTasks.length === 0 ? (
+            {tasks.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="checkmark-done-circle" size={64} color="#5D8AA8" />
                 <Text style={styles.emptyStateText}>No hay tareas completadas</Text>
@@ -181,9 +188,9 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
               </View>
             ) : (
               <FlatList
-                data={completedTasks}
+                data={tasks}
                 keyExtractor={(item) => item.uid}
-                renderItem={({ item }) => <TaskItem task={item} />}
+                renderItem={({ item }) => (<TaskItem task={item} users={users} teams={teams} />)}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
               />
