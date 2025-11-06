@@ -1,44 +1,65 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { mockUsers } from '../../data/users';
-import { mockTeams } from '../../data/teams';
+import userService from '../../services/user.service';
+import { Team, User } from '../../types/navigation';
+import miscService from '../../services/misc.service';
+import teamService from '../../services/team.service';
 
 type AssigneeType = 'team' | 'user';
 
 type AssigneeSelectorProps = {
   assigneeType: AssigneeType;
   onAssigneeTypeChange: (type: AssigneeType) => void;
-  selectedTeamId?: number;
-  onTeamChange: (teamId?: number) => void;
-  selectedUserId?: number;
-  onUserChange: (userId?: number) => void;
+  selectedTeamUID?: string;
+  onTeamChange: (teamId?: string) => void;
+  selectedUserUID?: string;
+  onUserChange: (userId?: string) => void;
 };
 
 const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
   assigneeType,
   onAssigneeTypeChange,
-  selectedTeamId,
+  selectedTeamUID,
   onTeamChange,
-  selectedUserId,
+  selectedUserUID,
   onUserChange,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [fetchedUsers, fetchedTeams] = await Promise.all([
+          userService.getAllUsers(),
+          teamService.getAllTeams()
+        ]);
+        setUsers(fetchedUsers);
+        setTeams(fetchedTeams);
+      } catch (error) {
+        console.error('Error loading users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Filtrar equipos y usuarios basado en la búsqueda
-  const filteredTeams = mockTeams.filter(team =>
+    loadData();
+  }, []);
+
+  const filteredTeams = teams.filter(team =>
     team.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredUsers = mockUsers.filter(user =>
+  const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getAvatarColor = (id: number) => {
-    const colors = ['#4A6572', '#344955', '#5D8AA8', '#7F8C8D', '#B2BEC3'];
-    return colors[id % colors.length];
-  };
+  const colors = ['#4A6572', '#344955', '#5D8AA8', '#7F8C8D', '#B2BEC3'];
 
   return (
     <View style={styles.container}>
@@ -103,41 +124,41 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
         {assigneeType === 'team' ? (
           filteredTeams.map(team => (
             <TouchableOpacity
-              key={team.id}
+              key={team.uid}
               style={[
                 styles.resultItem,
-                selectedTeamId === team.id && styles.resultItemSelected
+                selectedTeamUID === team.uid && styles.resultItemSelected
               ]}
-              onPress={() => onTeamChange(team.id)}
+              onPress={() => onTeamChange(team.uid)}
             >
-              <View style={[styles.avatar, { backgroundColor: getAvatarColor(team.id) }]}>
+              <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(team.uid, colors) }]}>
                 <Ionicons name="people" size={16} color="#FFFFFF" />
               </View>
               <View style={styles.resultInfo}>
                 <Text style={styles.resultName}>{team.name}</Text>
                 <Text style={styles.resultDescription}>{team.description}</Text>
                 <Text style={styles.resultMeta}>
-                  {team.memberIds.length} miembros
+                  {team.memberUIDs.length} miembros
                 </Text>
               </View>
               <Ionicons 
-                name={selectedTeamId === team.id ? "radio-button-on" : "radio-button-off"} 
+                name={selectedTeamUID === team.uid ? "radio-button-on" : "radio-button-off"} 
                 size={20} 
-                color={selectedTeamId === team.id ? '#4A6572' : '#B2BEC3'} 
+                color={selectedTeamUID === team.uid ? '#4A6572' : '#B2BEC3'} 
               />
             </TouchableOpacity>
           ))
         ) : (
           filteredUsers.map(user => (
             <TouchableOpacity
-              key={user.id}
+              key={user.uid}
               style={[
                 styles.resultItem,
-                selectedUserId === user.id && styles.resultItemSelected
+                selectedUserUID === user.uid && styles.resultItemSelected
               ]}
-              onPress={() => onUserChange(user.id)}
+              onPress={() => onUserChange(user.uid)}
             >
-              <View style={[styles.avatar, { backgroundColor: getAvatarColor(user.id) }]}>
+              <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(user.uid, colors) }]}>
                 <Text style={styles.avatarText}>
                   {user.name.split(' ').map(n => n[0]).join('')}
                 </Text>
@@ -150,9 +171,9 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
                 </Text>
               </View>
               <Ionicons 
-                name={selectedUserId === user.id ? "radio-button-on" : "radio-button-off"} 
+                name={selectedUserUID === user.uid ? "radio-button-on" : "radio-button-off"} 
                 size={20} 
-                color={selectedUserId === user.id ? '#4A6572' : '#B2BEC3'} 
+                color={selectedUserUID === user.uid ? '#4A6572' : '#B2BEC3'} 
               />
             </TouchableOpacity>
           ))

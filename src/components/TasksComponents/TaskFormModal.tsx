@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Task, Priority } from '../../types/navigation';
 import AssigneeSelector from './AssigneeSelector';
+import simpleAlertService from '../../services/simpleAlert.service';
 
 type TaskModalMode = 'create' | 'edit' | 'view';
 
@@ -22,18 +23,18 @@ type TaskFormModalProps = {
   visible: boolean;
   mode: TaskModalMode;
   task?: Task;
-  currentUserId: number;
-  onSave: (taskData: Omit<Task, 'id' | 'completed' | 'createdAt'>) => void;
-  onUpdate: (taskId: number, taskData: Omit<Task, 'id' | 'createdBy' | 'createdAt'>) => void;
+  currentUserUID: string;
+  onSave: (taskData: Omit<Task, 'uid' | 'completed' | 'createdAt'>) => void;
+  onUpdate: (taskUID: string, taskData: Omit<Task, 'uid' | 'createdBy' | 'createdAt'>) => void;
   onClose: () => void;
-  onDelete?: (taskId: number) => void;
+  onDelete?: (taskUID: string) => void;
 };
 
 const TaskFormModal: React.FC<TaskFormModalProps> = ({
   visible,
   mode,
   task,
-  currentUserId,
+  currentUserUID,
   onSave,
   onUpdate,
   onClose,
@@ -44,8 +45,8 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const [dueDate, setDueDate] = useState(new Date());
   const [priority, setPriority] = useState<Priority>('media');
   const [assigneeType, setAssigneeType] = useState<'team' | 'user'>('user');
-  const [selectedTeamId, setSelectedTeamId] = useState<number | undefined>(undefined);
-  const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
+  const [selectedTeamUID, setSelectedTeamUID] = useState<string | undefined>(undefined);
+  const [selectedUserUID, setSelectedUserUID] = useState<string | undefined>(undefined);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -58,8 +59,8 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
         setDueDate(task?.dueDate ? new Date(task.dueDate) : new Date());
         setPriority(task?.priority || 'media');
         setAssigneeType(task?.assignedTo || 'user');
-        setSelectedTeamId(task?.assignedTeamId);
-        setSelectedUserId(task?.assignedUserId);
+        setSelectedTeamUID(task?.assignedTeamUID);
+        setSelectedUserUID(task?.assignedUserUID);
       } else {
         // Modo create - reset form
         resetForm();
@@ -74,8 +75,8 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
     setDueDate(new Date());
     setPriority('media');
     setAssigneeType('user');
-    setSelectedTeamId(undefined);
-    setSelectedUserId(currentUserId); // Por defecto asignar al usuario actual
+    setSelectedTeamUID(undefined);
+    setSelectedUserUID(currentUserUID); // Por defecto asignar al usuario actual
   };
 
   const validateForm = (): boolean => {
@@ -89,11 +90,11 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
       newErrors.description = 'La descripción es obligatoria';
     }
 
-    if (assigneeType === 'team' && !selectedTeamId) {
+    if (assigneeType === 'team' && !selectedTeamUID) {
       newErrors.assignee = 'Selecciona un equipo';
     }
 
-    if (assigneeType === 'user' && !selectedUserId) {
+    if (assigneeType === 'user' && !selectedUserUID) {
       newErrors.assignee = 'Selecciona una persona';
     }
 
@@ -104,22 +105,22 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const handleSave = () => {
     if (!validateForm()) return;
 
-    const taskData: Omit<Task, 'id' | 'createdAt'> = {
+    const taskData: Omit<Task, 'uid' | 'createdAt'> = {
         title: title.trim(),
         description: description.trim(),
         dueDate: dueDate,
         priority: priority,
         completed: task?.completed || false, // Preservar el estado de completado
         assignedTo: assigneeType,
-        assignedTeamId: assigneeType === 'team' ? selectedTeamId : undefined,
-        assignedUserId: assigneeType === 'user' ? selectedUserId : undefined,
-        createdBy: currentUserId,
+        assignedTeamUID: assigneeType === 'team' ? selectedTeamUID : undefined,
+        assignedUserUID: assigneeType === 'user' ? selectedUserUID : undefined,
+        createdBy: currentUserUID,
     };
 
     if (mode === 'create') {
       onSave(taskData);
     } else if (mode === 'edit' && task) {
-      onUpdate(task.id, taskData);
+      onUpdate(task.uid, taskData);
     }
 
     onClose();
@@ -128,16 +129,16 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const handleDelete = () => {
     if (!task) return;
 
-    Alert.alert(
+    simpleAlertService.showOptions(
       'Eliminar Tarea',
       `¿Estás seguro de que quieres eliminar la tarea "${task.title}"?`,
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Eliminar', 
+        { text: 'Cancelar', style: 'cancel', onPress: () => {} },
+        {
+          text: 'Eliminar',
           style: 'destructive',
           onPress: () => {
-            onDelete?.(task.id);
+            onDelete?.(task.uid);
             onClose();
           }
         },
@@ -285,10 +286,10 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
               <AssigneeSelector
                 assigneeType={assigneeType}
                 onAssigneeTypeChange={setAssigneeType}
-                selectedTeamId={selectedTeamId}
-                onTeamChange={setSelectedTeamId}
-                selectedUserId={selectedUserId}
-                onUserChange={setSelectedUserId}
+                selectedTeamUID={selectedTeamUID}
+                onTeamChange={setSelectedTeamUID}
+                selectedUserUID={selectedUserUID}
+                onUserChange={setSelectedUserUID}
               />
               {errors.assignee && <Text style={styles.errorText}>{errors.assignee}</Text>}
             </ScrollView>

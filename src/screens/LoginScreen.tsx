@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -7,6 +7,7 @@ import {
   SafeAreaView, 
   ScrollView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -21,9 +22,27 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [checking, setChecking] = useState(true);
 
   const usersRef = useMemo(() => collection(db, 'users'), []);
 
+  useEffect(() => {
+    let isSubscribed = true;
+    const unsubscribe = authService.verifyIfLoggedIn(
+      usersRef, 
+      navigation,
+      () => {
+        if (isSubscribed) {
+          setChecking(false);
+        }
+      }
+    );
+    return () => {
+      isSubscribed = false;
+      unsubscribe();
+    };
+  }, []);
+  
   const handleLogIn = async () => {
     await authService.handleLogin(email, password, usersRef, navigation);
   };
@@ -31,6 +50,30 @@ export default function LoginScreen({ navigation }: Props) {
   const handleSignUp = () => {
     navigation.navigate('Signup');
   };
+
+  if (checking) {
+    return (
+      <SafeAreaView style={styles.fullScreen}>
+        <LinearGradient 
+          colors={['#c7d3eaff', '#6689c5ff', '#5282e3ff']} 
+          style={[styles.fullScreen, styles.loadingContainer]}
+        >
+          <StatusBar style="light" translucent backgroundColor="transparent" />
+
+          <View style={styles.loadingContent}>
+            {/* Indicador de carga */}
+            <ActivityIndicator 
+              size="large" 
+              color="#FFFFFF" 
+              style={styles.spinner}
+            />
+            <Text style={styles.loadingText}>Verificando sesión...</Text>
+          </View>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
+
 
   return (
     <SafeAreaView style={styles.fullScreen}>
@@ -121,6 +164,45 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   fullScreen: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContent: {
+    alignItems: 'center',
+  },
+  logoPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  logoText: {
+    fontSize: 60,
+  },
+  appName: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 40,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  spinner: {
+    marginBottom: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '500',
+    opacity: 0.9,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -244,61 +326,5 @@ const styles = StyleSheet.create({
     color: '#2A5298',
     fontWeight: 'bold',
     textDecorationLine: 'underline',
-  },
-  roleSelector: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: 22,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  roleTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2A5298',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  userButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  userButton: {
-    backgroundColor: '#E8E8E8',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    minWidth: 120,
-    alignItems: 'center',
-  },
-  userButtonSelected: {
-    backgroundColor: '#85c8f2ff',
-  },
-  userButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  demoCredentials: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  demoTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  demoText: {
-    fontSize: 12,
-    color: '#E8E8E8',
-    marginBottom: 4,
   },
 });

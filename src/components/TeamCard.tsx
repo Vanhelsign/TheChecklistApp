@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Team, TeamModalMode, User } from '../types/navigation';
-import { mockUsers } from '../data/users';
+import { Team, User } from '../types/navigation';
+import miscService from '../services/misc.service';
+import userService from '../services/user.service';
 
 type TeamCardProps = {
   team: Team;
@@ -13,13 +14,22 @@ type TeamCardProps = {
 };
 
 const TeamCard: React.FC<TeamCardProps> = ({ team, onEdit, onView, onDelete, isOwner }) => {
-  const teamMembers = mockUsers.filter(user => team.memberIds.includes(user.id));
-  const manager = mockUsers.find(user => user.id === team.managerId);
+  const [teamMembers, setTeamMembers] = useState<User[]>([]);
+  const [manager, setManager] = useState<User | null>(null);
+  
+  useEffect(() => {
+    const getData = async () => {
+      const [fetchedTeamMembers, fetchedManager] = await Promise.all([
+        userService.getUsersByIds(team.memberUIDs),
+        userService.getUserById(team.managerUID)
+      ]);
+      setTeamMembers(fetchedTeamMembers);
+      setManager(fetchedManager);
+    };
+    getData();
+  }, []);
 
-  const getAvatarColor = (userId: number) => {
-    const colors = ['#4A6572', '#344955', '#5D8AA8', '#7F8C8D', '#B2BEC3'];
-    return colors[userId % colors.length];
-  };
+  const colors = ['#4A6572', '#344955', '#5D8AA8', '#7F8C8D', '#B2BEC3'];
 
   return (
     <View style={styles.card}>
@@ -57,8 +67,8 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, onEdit, onView, onDelete, isO
         <Text style={styles.membersLabel}>Miembros:</Text>
         <View style={styles.membersList}>
           {teamMembers.map((member) => (
-            <View key={member.id} style={styles.memberBadge}>
-              <View style={[styles.smallAvatar, { backgroundColor: getAvatarColor(member.id) }]}>
+            <View key={member.uid} style={styles.memberBadge}>
+              <View style={[styles.smallAvatar, { backgroundColor: miscService.getAvatarColor(member.uid, colors) }]}>
                 <Text style={styles.smallAvatarText}>
                   {member.name.split(' ').map(n => n[0]).join('')}
                 </Text>

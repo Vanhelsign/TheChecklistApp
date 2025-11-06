@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {use, useEffect, useState} from 'react';
 import { 
   View, 
   FlatList, 
@@ -9,37 +9,56 @@ import {
   SafeAreaView,
   Animated
 } from 'react-native';
-import { mockTasks } from '../data/mockTasks';
 import TaskItem from '../components/TaskItem';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList, UserType, Task } from '../types/navigation';
+import { RootStackParamList, UserType, Task, User, Team } from '../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
 import SideNavbar from '../components/SideNavbar';
 import MenuButton from '../components/MenuButton';
+import taskService from '../services/task.service';
+import authService from '../services/auth.service';
+import userService from '../services/user.service';
+import teamService from '../services/team.service';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'CompletedTasks'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'PendingTasks'>;
 
-export default function CompletedTasksScreen({ route, navigation }: Props) {
+export default function PendingTasksScreen({ route, navigation }: Props) {
 
-  const { userType, userId, userName, userTeamIds } = route.params;
+  const { userType, userUID, userName, userTeamUIDs } = route.params;
 
   const userParams = {
     userType: userType,
-    userId: userId,
+    userUID: userUID,
     userName: userName,
-    userTeamIds: userTeamIds
+    userTeamUIDs: userTeamUIDs
   };
 
   // Estados para la navbar
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [activeScreen, setActiveScreen] = useState('CompletedTasks');
+  const [activeScreen, setActiveScreen] = useState('PendingTasks');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const slideAnim = useState(new Animated.Value(-280))[0];
 
-  // Filtrar tareas completadas
-  const pendingTasks = mockTasks.filter(task => !task.completed);
+  useEffect(() => {
+    const fetchData = async () => {
+      const [fetchedTasks, fetchedUsers, fetchedTeams] = await Promise.all([
+        taskService.getAllTasks(),
+        userService.getAllUsers(),
+        teamService.getAllTeams()
+      ]);
+      const filteredTasks = fetchedTasks.filter(task => !task.completed);
+      setTasks(filteredTasks);
+      setUsers(fetchedUsers);
+      setTeams(fetchedTeams);
+    };
+    
+    fetchData();
+  }, []);
 
   // Funciones de navegación (igual que en las otras pantallas)
   const toggleNav = () => {
@@ -62,7 +81,7 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
   const navigateTo = (screenName: keyof RootStackParamList) => {
     setActiveScreen(screenName);
     
-    if (screenName === 'CompletedTasks') {
+    if (screenName === 'PendingTasks') {
       toggleNav();
       return;
     }
@@ -74,11 +93,14 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
       case 'Login':
         navigation.navigate('Login');
         break;
-      case 'PendingTasks':
-        navigation.navigate('PendingTasks', userParams);
+      case 'CompletedTasks':
+        navigation.navigate('CompletedTasks', userParams);
         break;
       case 'Tasks':
         navigation.navigate('Tasks', userParams);
+        break;
+      case 'Teams':
+        navigation.navigate('Teams', userParams);
         break;
       default:
         navigation.navigate(screenName as any);
@@ -89,7 +111,7 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
   };
 
   const handleLogout = () => {
-    navigation.replace('Login');
+    authService.handleLogout(navigation);
   };
 
   const getRoleColor = () => {
@@ -148,28 +170,28 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
               Tareas Pendientes
             </Text>
             <Text style={styles.subtitle}>
-              {pendingTasks.length === 0 
-                ? 'No hay tareas completadas' 
-                : `Hay ${pendingTasks.length} tarea${pendingTasks.length !== 1 ? 's' : ''} pendientes`
+              {tasks.length === 0 
+                ? 'No hay tareas pendientes' 
+                : `Hay ${tasks.length} tarea${tasks.length !== 1 ? 's' : ''} pendientes`
               }
             </Text>
           </View>
 
-          {/* Lista de Tareas Completadas */}
+          {/* Lista de Tareas Pendientes */}
           <View style={styles.container}>
-            {pendingTasks.length === 0 ? (
+            {tasks.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="checkmark-done-circle" size={64} color="#5D8AA8" />
-                <Text style={styles.emptyStateText}>No hay tareas completadas</Text>
+                <Text style={styles.emptyStateText}>No hay tareas pendientes</Text>
                 <Text style={styles.emptyStateSubtext}>
-                  Las tareas que completes aparecerán aquí
+                  Las tareas pendientes aparecerán aquí
                 </Text>
               </View>
             ) : (
               <FlatList
-                data={pendingTasks}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => <TaskItem task={item} />}
+                data={tasks}
+                keyExtractor={(item) => item.uid}
+                renderItem={({ item }) => (<TaskItem task={item} users={users} teams={teams} />)}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
               />

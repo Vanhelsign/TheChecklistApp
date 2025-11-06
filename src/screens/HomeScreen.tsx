@@ -10,17 +10,18 @@ import ManagerDashboard from '../components/ManagerDashboard';
 import WorkerDashboard from '../components/WorkerDashboard';
 import SideNavbar from '../components/SideNavbar';
 import MenuButton from '../components/MenuButton';
+import authService from '../services/auth.service';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export default function HomeScreen({ route, navigation }: Props) {
-  const { userType, userId, userName, userTeamIds } = route.params;
+  const { userType, userUID, userName, userTeamUIDs } = route.params;
 
   const userParams = {
     userType: userType,
-    userId: userId,           
+    userUID: userUID,
     userName: userName,        
-    userTeamIds: userTeamIds  
+    userTeamUIDs: userTeamUIDs  
   };
 
   {/* Seccion para la navbar */}
@@ -64,14 +65,14 @@ export default function HomeScreen({ route, navigation }: Props) {
   };
 
   const handleLogout = () => {
-    navigation.replace('Login');
+    authService.handleLogout(navigation);
   };
 
   {/* Fin seccion para la navbar */}
 
   const getWelcomeMessage = () => {
     const role = userType === 'manager' ? 'Gerente' : 'Trabajador';
-    return `Bienvenido, ${role}`;
+    return `Bienvenido, ${userName}`;
   };
 
   const getRoleColor = () => {

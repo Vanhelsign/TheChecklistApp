@@ -8,13 +8,13 @@ export type TeamModalMode = 'create' | 'edit' | 'view';
 // Tipo para los parámetros de usuario que se pasan entre pantallas
 export type UserParams = {
   userType: UserType;
-  userId: number;
+  userUID: string;
   userName: string;
-  userTeamIds: number[];
+  userTeamUIDs: string[];
 };
 
 export type Task = {
-  id: number;
+  uid: string;
   title: string;
   description: string;
   dueDate: Date;
@@ -22,26 +22,26 @@ export type Task = {
   completed: boolean;
   createdAt: Date;
   assignedTo: 'team' | 'user'; // Si es para equipo o usuario específico
-  assignedTeamId?: number; // ID del equipo asignado (si assignedTo === 'team')
-  assignedUserId?: number; // ID del usuario asignado (si assignedTo === 'user')
-  createdBy: number; // ID del manager que creó la tarea
+  assignedTeamUID?: string; // ID del equipo asignado (si assignedTo === 'team')
+  assignedUserUID?: string; // ID del usuario asignado (si assignedTo === 'user')
+  createdBy: string; // ID del manager que creó la tarea
 };
 
 export type User = {
-  id: number;
+  uid: string;
   email: string;
-  password: string;
+  password?: string;
   name: string;
   role: 'manager' | 'worker';
-  teamIds: number[]; // IDs de equipos a los que pertenece
+  teamUIDs: string[]; // IDs de equipos a los que pertenece
 };
 
 export type Team = {
-  id: number;
+  uid: string;
   name: string;
-  description: string;
-  managerId: number;    // ← QUIÉN creó el equipo (manager)
-  memberIds: number[];  // ← QUIÉNES están en el equipo (workers)
+  description?: string;
+  managerUID: string;    // ← QUIÉN creó el equipo (manager)
+  memberUIDs: string[];  // ← QUIÉNES están en el equipo (workers)
   createdAt: Date;
 };
 

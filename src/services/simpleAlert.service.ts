@@ -24,6 +24,26 @@ class SimpleAlertService {
   showSuccess(message: string) {
     this.showAlert('Éxito', message);
   }
+
+  showOptions(
+    title: string,
+    message: string,
+    options: { text: string, style: 'default' | 'cancel' | 'destructive', onPress: () => void }[]) {
+    if (Platform.OS === 'web') {
+      const optionTexts = options.map((opt, index) => `${index + 1}: ${opt.text}`).join('\n');
+      const selectedOption = window.prompt(`${title}\n${message}\n\n${optionTexts}`);
+      const selectedIndex = parseInt(selectedOption || '', 10) - 1;
+      if (selectedIndex >= 0 && selectedIndex < options.length) {
+        options[selectedIndex].onPress();
+      }
+    } else {
+      Alert.alert(title ?? '', message, options.map(opt => ({
+        text: opt.text,
+        style: opt.style,
+        onPress: opt.onPress
+      })));
+    }
+  }
 }
 
 export default new SimpleAlertService();
