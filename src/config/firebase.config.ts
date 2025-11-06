@@ -1,6 +1,5 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import {
@@ -29,7 +28,20 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// In Expo / React Native environments Firebase Analytics and Installations
+// can throw if certain config values are missing. We only initialize
+// analytics when running on web and measurementId is provided.
+let analytics: any | null = null;
+if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getAnalytics } = require('firebase/analytics');
+    analytics = getAnalytics(app);
+  } catch (err) {
+    analytics = null;
+  }
+}
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
