@@ -10,6 +10,7 @@ import {
   Animated
 } from 'react-native';
 import TaskItem from '../components/TaskItem';
+import TaskFormModal from '../components/TasksComponents/TaskFormModal';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, UserType, Task, User, Team } from '../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,6 +43,9 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('view');
+  const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
   const slideAnim = useState(new Animated.Value(-280))[0];
 
   useEffect(() => {
@@ -191,13 +195,60 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
               <FlatList
                 data={tasks}
                 keyExtractor={(item) => item.uid}
-                renderItem={({ item }) => (<TaskItem task={item} users={users} teams={teams} />)}
+                renderItem={({ item }) => (
+                  <TaskItem
+                    task={item}
+                    users={users}
+                    teams={teams}
+                    onView={(t) => {
+                      setSelectedTask(t);
+                      setModalMode('view');
+                      setModalVisible(true);
+                    }}
+                  />
+                )}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
               />
             )}
           </View>
         </View>
+        {/* Modal for viewing a task */}
+        <TaskFormModal
+          visible={modalVisible}
+          mode={modalMode}
+          task={selectedTask}
+          currentUserUID={userUID}
+          onSave={async (taskData) => {
+            // not used in view mode
+          }}
+          onUpdate={async (taskUID, taskData) => {
+            try {
+              await taskService.updateTask(taskUID, taskData as any);
+              // If the task was marked completed, remove it from pending list
+              if ((taskData as any).completed === true) {
+                setTasks(prev => prev.filter(t => t.uid !== taskUID));
+              } else {
+                setTasks(prev => prev.map(t => t.uid === taskUID ? { ...t, ...taskData } : t));
+              }
+              // Close modal after applying changes
+              setModalVisible(false);
+              setSelectedTask(undefined);
+            } catch (err) {
+              console.error('Error updating task from modal:', err);
+            }
+          }}
+          onClose={() => { setModalVisible(false); setSelectedTask(undefined); }}
+          onDelete={async (taskUID) => {
+            try {
+              await taskService.deleteTask(taskUID);
+              setTasks(prev => prev.filter(t => t.uid !== taskUID));
+              setModalVisible(false);
+            } catch (err) {
+              console.error('Error deleting task from modal:', err);
+            }
+          }}
+        />
       </LinearGradient>
     </SafeAreaView>
   );

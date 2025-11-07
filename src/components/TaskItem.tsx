@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import PriorityBadge from './PriorityBadge';
 import { Task, Team, User } from '../types/navigation';
 
@@ -7,10 +8,11 @@ type Props = {
   task: Task;
   users?: User[];
   teams?: Team[];
+  onView?: (task: Task) => void;
 };
 
 
-export default function TaskItem({ task, users = [], teams = [] }: Props) {
+export default function TaskItem({ task, users = [], teams = [], onView }: Props) {
   const isTeamTask = task.assignedTo === 'team';
   const assignedName = isTeamTask
     ? (() => {
@@ -37,6 +39,11 @@ export default function TaskItem({ task, users = [], teams = [] }: Props) {
           }]}>
           {assignedName}
         </Text>
+        {onView && (
+          <TouchableOpacity style={styles.viewBtn} onPress={() => onView(task)}>
+            <Ionicons name="eye-outline" size={18} color="#4A6572" />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -70,5 +77,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
     textAlign: 'right',
+  },
+  viewBtn: {
+    marginLeft: 8,
+    padding: 6,
   },
 });
