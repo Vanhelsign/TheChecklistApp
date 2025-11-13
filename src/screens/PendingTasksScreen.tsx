@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import TaskCard from '../components/TaskCard';
 import TaskFormModal from '../components/TasksComponents/TaskFormModal';
+import UserTeamFilterModal from '../components/UserTeamFilterModal';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, UserType, Task, User, Team } from '../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -50,6 +51,11 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const slideAnim = useState(new Animated.Value(-280))[0];
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filterType, setFilterType] = useState<'user' | 'team' | null>(null);
+  const [filterId, setFilterId] = useState<string | null>(null);
+  // Filtro para workers: 'all' | 'personal' | 'team'
+  const [workerFilter, setWorkerFilter] = useState<'all' | 'personal' | 'team'>('all');
 
   // Cargar usuarios, equipos y tareas
   useEffect(() => {
@@ -105,11 +111,73 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
     setTasks(filteredTasks);
   }, [allTasks, teams, userType, userUID]);
 
+  // Aplicar filtro de usuario/equipo (solo para managers)
+  const applyUserTeamFilter = (type: 'user' | 'team' | null, id: string | null) => {
+    setFilterType(type);
+    setFilterId(id);
+  };
+
+  // Filtrar tareas según el filtro seleccionado (managers)
+  const getManagerFilteredTasks = () => {
+    if (userType !== 'manager' || !filterType || !filterId) {
+      return tasks;
+    }
+
+    if (filterType === 'user') {
+      // Filtrar por usuario: tareas asignadas al usuario o creadas por él
+      return tasks.filter(task => 
+        task.assignedUserUID === filterId || task.createdBy === filterId
+      );
+    } else if (filterType === 'team') {
+      // Filtrar por equipo: tareas asignadas al equipo
+      return tasks.filter(task => task.assignedTeamUID === filterId);
+    }
+
+    return tasks;
+  };
+
+  // Filtrar tareas según el filtro de worker
+  const getWorkerFilteredTasks = () => {
+    if (userType !== 'worker') {
+      return tasks;
+    }
+
+    if (workerFilter === 'all') {
+      return tasks;
+    } else if (workerFilter === 'personal') {
+      // Solo tareas asignadas directamente al usuario
+      return tasks.filter(task => task.assignedTo === 'user' && task.assignedUserUID === userUID);
+    } else if (workerFilter === 'team') {
+      // Solo tareas asignadas a equipos
+      return tasks.filter(task => task.assignedTo === 'team');
+    }
+
+    return tasks;
+  };
+
+  // Aplicar filtros según el tipo de usuario
+  const filteredTasks = userType === 'manager' ? getManagerFilteredTasks() : getWorkerFilteredTasks();
+
   // Filtrar tareas por búsqueda
-  const searchedTasks = tasks.filter(task =>
+  const searchedTasks = filteredTasks.filter(task =>
     task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     task.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Obtener nombre del filtro activo
+  const getFilterLabel = () => {
+    if (!filterType || !filterId) return null;
+    
+    if (filterType === 'user') {
+      const user = users.find(u => u.uid === filterId);
+      return user ? `Usuario: ${user.name}` : null;
+    } else if (filterType === 'team') {
+      const team = teams.find(t => t.uid === filterId);
+      return team ? `Equipo: ${team.name}` : null;
+    }
+    
+    return null;
+  };
 
   // Funciones de navegación (igual que en las otras pantallas)
   const toggleNav = () => {
@@ -222,27 +290,106 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
             </Text>
             <Text style={styles.subtitle}>
               {tasks.length === 0 
-                ? 'No hay tareas pendientes' 
-                : `Hay ${tasks.length} tarea${tasks.length !== 1 ? 's' : ''} pendientes`
+                ? 'No hay tareas' 
+                : tasks.length === 1 
+                  ? 'Hay una tarea pendiente'
+                  : `Hay ${tasks.length} tareas pendientes`
               }
             </Text>
           </View>
 
-          {/* Barra de Búsqueda */}
+          {/* Segmented Control para Workers */}
+          {userType === 'worker' && tasks.length > 0 && (
+            <View style={styles.workerFilterContainer}>
+              <View style={styles.segmentedControl}>
+                <TouchableOpacity
+                  style={[styles.segment, workerFilter === 'all' && styles.segmentActive]}
+                  onPress={() => setWorkerFilter('all')}
+                >
+                  <Ionicons 
+                    name="apps" 
+                    size={16} 
+                    color={workerFilter === 'all' ? '#FFFFFF' : '#5D8AA8'} 
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.segmentText, workerFilter === 'all' && styles.segmentTextActive]}>
+                    Todos
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.segment, workerFilter === 'personal' && styles.segmentActive]}
+                  onPress={() => setWorkerFilter('personal')}
+                >
+                  <Ionicons 
+                    name="person" 
+                    size={16} 
+                    color={workerFilter === 'personal' ? '#FFFFFF' : '#5D8AA8'} 
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.segmentText, workerFilter === 'personal' && styles.segmentTextActive]}>
+                    Personal
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.segment, workerFilter === 'team' && styles.segmentActive]}
+                  onPress={() => setWorkerFilter('team')}
+                >
+                  <Ionicons 
+                    name="people" 
+                    size={16} 
+                    color={workerFilter === 'team' ? '#FFFFFF' : '#5D8AA8'} 
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.segmentText, workerFilter === 'team' && styles.segmentTextActive]}>
+                    Equipos
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Botón de Filtro y Barra de Búsqueda */}
           {tasks.length > 0 && (
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#5D8AA8" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Buscar tareas por título o descripción..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={20} color="#B2BEC3" />
+            <View style={styles.searchRow}>
+              {/* Botón de Filtro (solo para managers) */}
+              {userType === 'manager' && (
+                <TouchableOpacity 
+                  style={[styles.filterButton, (filterType && filterId) && styles.filterButtonActive]}
+                  onPress={() => setFilterModalVisible(true)}
+                >
+                  <Ionicons 
+                    name="person-outline" 
+                    size={20} 
+                    color={(filterType && filterId) ? '#FFFFFF' : '#5D8AA8'} 
+                  />
                 </TouchableOpacity>
               )}
+
+              {/* Barra de Búsqueda */}
+              <View style={[styles.searchContainer, userType === 'manager' && styles.searchContainerWithFilter]}>
+                <Ionicons name="search" size={20} color="#5D8AA8" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Buscar tareas por título o descripción..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={20} color="#B2BEC3" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Etiqueta de filtro activo */}
+          {userType === 'manager' && getFilterLabel() && (
+            <View style={styles.filterLabelContainer}>
+              <Text style={styles.filterLabelText}>{getFilterLabel()}</Text>
+              <TouchableOpacity onPress={() => applyUserTeamFilter(null, null)}>
+                <Ionicons name="close-circle" size={16} color="#5D8AA8" />
+              </TouchableOpacity>
             </View>
           )}
 
@@ -321,6 +468,15 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
               console.error('Error deleting task from modal:', err);
             }
           }}
+        />
+
+        {/* Modal de filtro de usuario/equipo */}
+        <UserTeamFilterModal
+          visible={filterModalVisible}
+          onClose={() => setFilterModalVisible(false)}
+          onApplyFilter={applyUserTeamFilter}
+          currentFilterType={filterType}
+          currentFilterId={filterId}
         />
       </LinearGradient>
     </SafeAreaView>
@@ -459,12 +615,68 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
+  workerFilterContainer: {
+    marginHorizontal: 20,
+    marginBottom: 15,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  segment: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+  },
+  segmentActive: {
+    backgroundColor: '#5D8AA8',
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5D8AA8',
+  },
+  segmentTextActive: {
+    color: '#FFFFFF',
+  },
+  searchRow: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    gap: 12,
+  },
+  filterButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e6f7ff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  filterButtonActive: {
+    backgroundColor: '#5D8AA8',
+    borderColor: '#5D8AA8',
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    marginHorizontal: 20,
-    marginBottom: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
@@ -476,12 +688,32 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  searchContainerWithFilter: {
+    flex: 1,
+  },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: '#4A6572',
     marginLeft: 12,
     padding: 0,
+  },
+  filterLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E6F7FF',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 8,
+  },
+  filterLabelText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#4A6572',
+    fontWeight: '500',
   },
   listContent: {
     paddingBottom: 20,

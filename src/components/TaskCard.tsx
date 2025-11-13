@@ -46,7 +46,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               Asignada a: {assignedTo || 'No asignada'}
             </Text>
             <Text style={styles.taskMetaText}>
-              • Creada por: {createdBy || 'Desconocido'}
+              •  Creada por: {createdBy || 'Desconocido'}
             </Text>
           </View>
         </View>

@@ -49,6 +49,7 @@ export default function TasksScreen({ route, navigation }: Props) {
   const [modalMode, setModalMode] = useState<TaskModalMode>('create');
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlyMyTasks, setShowOnlyMyTasks] = useState(false);
 
   // Fetch tasks AND users ONCE when component mounts
   useEffect(() => {
@@ -88,14 +89,22 @@ export default function TasksScreen({ route, navigation }: Props) {
     };
   }, []);
 
-  // Filtrar tareas creadas por el manager actual
-  const managerTasks = tasks.filter(task => task.createdBy === userUID);
+  // Filtrar tareas (opcionalmente solo las creadas por el usuario)
+  const managerTasks = showOnlyMyTasks 
+    ? tasks.filter(task => task.createdBy === userUID)
+    : tasks;
 
-  // Filtrar tareas por búsqueda
-  const filteredTasks = managerTasks.filter(task =>
-    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    task.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filtrar tareas por búsqueda (título, descripción y nombre del creador)
+  const filteredTasks = managerTasks.filter(task => {
+    const searchLower = searchQuery.toLowerCase();
+    const creatorName = users.find(u => u.uid === task.createdBy)?.name?.toLowerCase() || '';
+    
+    return (
+      task.title.toLowerCase().includes(searchLower) ||
+      task.description.toLowerCase().includes(searchLower) ||
+      creatorName.includes(searchLower)
+    );
+  });
 
   // Funciones de navegación
   const toggleNav = () => {
@@ -311,7 +320,7 @@ export default function TasksScreen({ route, navigation }: Props) {
               <Ionicons name="search" size={20} color="#5D8AA8" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Buscar tareas por título o descripción..."
+                placeholder="Buscar por título, descripción o creador..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -322,6 +331,18 @@ export default function TasksScreen({ route, navigation }: Props) {
               )}
             </View>
           )}
+
+          {/* Filtro: Solo mis tareas */}
+          <TouchableOpacity 
+            style={styles.filterContainer}
+            onPress={() => setShowOnlyMyTasks(!showOnlyMyTasks)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, showOnlyMyTasks && styles.checkboxChecked]}>
+              {showOnlyMyTasks && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
+            </View>
+            <Text style={styles.filterText}>Solo mis tareas</Text>
+          </TouchableOpacity>
 
           {/* Lista de Tareas */}
           <View style={styles.container}>
@@ -418,6 +439,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 20,
+    marginTop: -5,
+    marginBottom: 10,
+    paddingVertical: 4,
+  },
+  checkbox: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  checkboxChecked: {
+    backgroundColor: '#5D8AA8',
+    borderColor: '#5D8AA8',
+  },
+  filterText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '400',
   },
   searchContainer: {
     flexDirection: 'row',

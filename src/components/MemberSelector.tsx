@@ -64,7 +64,7 @@ const MemberSelector: React.FC<MemberSelectorProps> = ({
             <View key={user.uid} style={styles.viewModeMemberCard}>
               <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(user.uid, colors) }]}>
                 <Text style={styles.avatarText}>
-                  {user.name.split(' ').map(n => n[0]).join('')}
+                  {miscService.getInitials(user.name)}
                 </Text>
               </View>
               <View style={styles.memberInfo}>
@@ -119,7 +119,7 @@ const MemberSelector: React.FC<MemberSelectorProps> = ({
           >
             <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(user.uid, colors) }]}>
               <Text style={styles.avatarText}>
-                {user.name.split(' ').map(n => n[0]).join('')}
+                {miscService.getInitials(user.name)}
               </Text>
             </View>
             

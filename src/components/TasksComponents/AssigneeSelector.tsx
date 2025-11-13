@@ -110,7 +110,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
           <View style={styles.viewModeCard}>
             <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(assignedUser.uid, colors) }]}>
               <Text style={styles.avatarText}>
-                {assignedUser.name.split(' ').map(n => n[0]).join('')}
+                {miscService.getInitials(assignedUser.name)}
               </Text>
             </View>
             <View style={styles.resultInfo}>
@@ -236,7 +236,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
             >
               <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(user.uid, colors) }]}>
                 <Text style={styles.avatarText}>
-                  {user.name.split(' ').map(n => n[0]).join('')}
+                  {miscService.getInitials(user.name)}
                 </Text>
               </View>
               <View style={styles.resultInfo}>

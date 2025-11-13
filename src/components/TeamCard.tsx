@@ -70,7 +70,7 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, onEdit, onView, onDelete, isO
             <View key={member.uid} style={styles.memberBadge}>
               <View style={[styles.smallAvatar, { backgroundColor: miscService.getAvatarColor(member.uid, colors) }]}>
                 <Text style={styles.smallAvatarText}>
-                  {member.name.split(' ').map(n => n[0]).join('')}
+                  {miscService.getInitials(member.name)}
                 </Text>
               </View>
               <Text style={styles.memberName}>{member.name}</Text>
