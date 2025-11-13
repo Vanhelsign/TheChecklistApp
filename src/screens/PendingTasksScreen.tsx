@@ -7,9 +7,10 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Animated
+  Animated,
+  TextInput
 } from 'react-native';
-import TaskItem from '../components/TaskItem';
+import TaskCard from '../components/TaskCard';
 import TaskFormModal from '../components/TasksComponents/TaskFormModal';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, UserType, Task, User, Team } from '../types/navigation';
@@ -41,41 +42,74 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState('PendingTasks');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]); // Todas las tareas sin filtrar
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('view');
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState('');
   const slideAnim = useState(new Animated.Value(-280))[0];
 
+  // Cargar usuarios, equipos y tareas
   useEffect(() => {
-    const fetchData = async () => {
-      const [fetchedUsers, fetchedTeams] = await Promise.all([
-        userService.getAllUsers(),
-        teamService.getAllTeams()
-      ]);
-      setUsers(fetchedUsers);
-      setTeams(fetchedTeams);
-    };
-    
-    fetchData();
-
-    // Suscribirse a tareas en tiempo real con caché offline
-    const unsubscribe = taskService.subscribeToTasks(
-      (fetchedTasks) => {
-        const filteredTasks = fetchedTasks.filter(task => !task.completed);
-        setTasks(filteredTasks);
-      },
-      (error) => {
-        console.error("Error en suscripción de tareas pendientes:", error);
-      }
+    const unsubscribeUsers = userService.subscribeToUsers(
+      (fetchedUsers) => setUsers(fetchedUsers),
+      (error) => console.error("Error en suscripción de usuarios:", error)
     );
 
-    // Cleanup
+    const unsubscribeTeams = teamService.subscribeToTeams(
+      (fetchedTeams) => setTeams(fetchedTeams),
+      (error) => console.error("Error en suscripción de equipos:", error)
+    );
+
+    const unsubscribeTasks = taskService.subscribeToTasks(
+      (fetchedTasks) => setAllTasks(fetchedTasks),
+      (error) => console.error("Error en suscripción de tareas:", error)
+    );
+
     return () => {
-      unsubscribe();
+      unsubscribeUsers();
+      unsubscribeTeams();
+      unsubscribeTasks();
     };
   }, []);
+
+  // Filtrar tareas cuando cambien allTasks o teams
+  useEffect(() => {
+    // Si es trabajador y aún no se han cargado los equipos, esperar
+    if (userType === 'worker' && teams.length === 0) {
+      return;
+    }
+
+    let filteredTasks = allTasks.filter(task => !task.completed);
+    
+    // Si el usuario es trabajador, filtrar solo sus tareas asignadas
+    if (userType === 'worker') {
+      filteredTasks = filteredTasks.filter((task) => {
+        if (task.assignedTo === 'user') {
+          return task.assignedUserUID === userUID;
+        } else if (task.assignedTo === 'team') {
+          if (!task.assignedTeamUID) return false;
+          
+          const team = teams.find(t => t.uid === task.assignedTeamUID);
+          if (!team) return false;
+          
+          return team.memberUIDs.includes(userUID);
+        }
+        
+        return false;
+      });
+    }
+    
+    setTasks(filteredTasks);
+  }, [allTasks, teams, userType, userUID]);
+
+  // Filtrar tareas por búsqueda
+  const searchedTasks = tasks.filter(task =>
+    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    task.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Funciones de navegación (igual que en las otras pantallas)
   const toggleNav = () => {
@@ -194,6 +228,24 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
             </Text>
           </View>
 
+          {/* Barra de Búsqueda */}
+          {tasks.length > 0 && (
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#5D8AA8" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar tareas por título o descripción..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#B2BEC3" />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           {/* Lista de Tareas Pendientes */}
           <View style={styles.container}>
             {tasks.length === 0 ? (
@@ -204,12 +256,20 @@ export default function PendingTasksScreen({ route, navigation }: Props) {
                   Las tareas pendientes aparecerán aquí
                 </Text>
               </View>
+            ) : searchedTasks.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="search" size={64} color="#5D8AA8" />
+                <Text style={styles.emptyStateText}>No se encontraron tareas</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Intenta con otros términos de búsqueda
+                </Text>
+              </View>
             ) : (
               <FlatList
-                data={tasks}
+                data={searchedTasks}
                 keyExtractor={(item) => item.uid}
                 renderItem={({ item }) => (
-                  <TaskItem
+                  <TaskCard
                     task={item}
                     users={users}
                     teams={teams}
@@ -398,6 +458,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e6f7ff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#4A6572',
+    marginLeft: 12,
+    padding: 0,
   },
   listContent: {
     paddingBottom: 20,

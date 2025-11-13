@@ -340,38 +340,31 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const isViewMode = mode === 'view';
   const isCreateMode = mode === 'create';
 
-  return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent={true}
-      statusBarTranslucent={true}
-      onRequestClose={handleClose}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {/* Header del Modal */}
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isCreateMode && 'Crear Nueva Tarea'}
-                {mode === 'edit' && 'Editar Tarea'}
-                {isViewMode && 'Detalles de Tarea'}
-              </Text>
-              <TouchableOpacity onPress={handleClose}>
-                <Ionicons name="close" size={24} color="#4A6572" />
-              </TouchableOpacity>
-            </View>
+  const modalContentView = (
+    <View style={styles.modalContent}>
+      {/* Header del Modal */}
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>
+          {isCreateMode && 'Crear Nueva Tarea'}
+          {mode === 'edit' && 'Editar Tarea'}
+          {isViewMode && 'Detalles de Tarea'}
+        </Text>
+        <TouchableOpacity onPress={handleClose}>
+          <Ionicons name="close" size={24} color="#4A6572" />
+        </TouchableOpacity>
+      </View>
 
-            <ScrollView 
-            style={styles.modalScroll} 
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={styles.modalScrollContent}
-            bounces={true}
+      <ScrollView 
+      style={styles.modalScroll} 
+      showsVerticalScrollIndicator={true}
+      contentContainerStyle={styles.modalScrollContent}
+      bounces={true}
             alwaysBounceVertical={true}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             scrollEventThrottle={16}
+            nestedScrollEnabled={true}
+            scrollEnabled={true}
             >
               {/* Campo Título */}
               <View style={styles.formSection}>
@@ -610,10 +603,26 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                         value={dueDate}
                         mode="date"
                         display="default"
+                        minimumDate={new Date()} // No permitir fechas anteriores a hoy
                         onChange={(event, date) => {
                           setShowDatePicker(false);
                           if (date) {
-                            setDueDate(date);
+                            // Validar que la fecha seleccionada no sea anterior a hoy
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const selectedDate = new Date(date);
+                            selectedDate.setHours(0, 0, 0, 0);
+                            
+                            if (selectedDate >= today) {
+                              setDueDate(date);
+                            } else {
+                              // Si de alguna forma seleccionó una fecha pasada, usar hoy
+                              setDueDate(new Date());
+                              simpleAlertService.showAlert(
+                                'Fecha inválida',
+                                'No puedes seleccionar una fecha anterior al día de hoy.'
+                              );
+                            }
                           }
                         }}
                       />
@@ -691,7 +700,8 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                       >
                         <Text style={[
                           styles.priorityButtonText,
-                          status === stat && styles.priorityButtonTextSelected
+                          status === stat && styles.priorityButtonTextSelected,
+                          stat === TaskStatus.Completed && status === stat && styles.completedButtonTextSelected,
                         ]}>
                           {stat ? 'Completado' : 'Pendiente'}
                         </Text>
@@ -746,8 +756,27 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
               )}
             </View>
           </View>
+  );
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={true}
+      statusBarTranslucent={true}
+      onRequestClose={handleClose}
+    >
+      {isViewMode ? (
+        <View style={styles.modalOverlay}>
+          {modalContentView}
         </View>
-      </TouchableWithoutFeedback>
+      ) : (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            {modalContentView}
+          </View>
+        </TouchableWithoutFeedback>
+      )}
     </Modal>
   );
 };
@@ -851,9 +880,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#e6f7ff',
     borderColor: '#5D8AA8',
   },
-  completedButtonSelected : {
-    backgroundColor: '#88ff98ff',
-    borderColor: '#6da971ff',
+  completedButtonSelected: {
+    backgroundColor: '#10b981',
+    borderColor: '#059669',
   },
   priorityButtonDisabled: {
     opacity: 0.6,
@@ -865,6 +894,10 @@ const styles = StyleSheet.create({
   },
   priorityButtonTextSelected: {
     color: '#4A6572',
+    fontWeight: 'bold',
+  },
+  completedButtonTextSelected: {
+    color: '#ffffff',
     fontWeight: 'bold',
   },
   errorText: {

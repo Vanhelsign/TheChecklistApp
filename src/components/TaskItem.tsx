@@ -29,9 +29,17 @@ export default function TaskItem({ task, users = [], teams = [], onView }: Props
     <View style={styles.card}>
       <Text style={styles.title}>{task.title}</Text>
       
-      {/* Row with priority badge and assigned name */}
+      {/* Row with priority badge, completed badge and assigned name */}
       <View style={styles.footer}>
-        <PriorityBadge priority={task.priority} />
+        <View style={styles.badges}>
+          <PriorityBadge priority={task.priority} />
+          {task.completed && (
+            <View style={styles.completedBadge}>
+              <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+              <Text style={styles.completedText}>Completado</Text>
+            </View>
+          )}
+        </View>
         <Text style={
           [styles.assignedTo, 
           { color: isTeamTask ? '#3d6fb1ff' : '#5D8AA8', 
@@ -71,6 +79,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
+  },
+  badges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  completedText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   assignedTo: {
     fontSize: 14,

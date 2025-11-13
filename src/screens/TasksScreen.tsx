@@ -6,10 +6,11 @@ import {
   TouchableOpacity, 
   SafeAreaView, 
   FlatList,
-  Animated
+  Animated,
+  TextInput
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList, Task, Priority, User, Team } from '../types/navigation';
+import { RootStackParamList, Task, User, Team } from '../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import SideNavbar from '../components/SideNavbar';
 import MenuButton from '../components/MenuButton';
 import TaskFormModal from '../components/TasksComponents/TaskFormModal';
+import TaskCard from '../components/TaskCard';
 
 // Datos
 import taskService from '../services/task.service';
@@ -29,86 +31,6 @@ import simpleAlertService from '../services/simpleAlert.service';
 type TaskModalMode = 'create' | 'edit' | 'view';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Tasks'>;
-
-// TaskCard ahora recibe users como prop
-const TaskCard = ({ 
-  task, 
-  users,
-  teams,
-  onEdit, 
-  onView, 
-  onDelete 
-}: { 
-  task: Task; 
-  users: User[];
-  teams: Team[];
-  onEdit: (task: Task) => void;
-  onView: (task: Task) => void;
-  onDelete: (task: Task) => void;
-}) => {
-  const assignedTo = task.assignedTo === 'team' 
-    ? teams.find(t => t.uid === task.assignedTeamUID)?.name
-    : users.find(u => u.uid === task.assignedUserUID)?.name;
-  
-  const createdBy = users.find(u => u.uid === task.createdBy)?.name;
-
-  const getPriorityColor = (priority: Priority) => {
-    switch (priority) {
-      case 'alta': return '#e74c3c';
-      case 'media': return '#f39c12';
-      case 'baja': return '#27ae60';
-      default: return '#7F8C8D';
-    }
-  };
-
-  return (
-    <View style={styles.taskCard}>
-      <View style={styles.taskHeader}>
-        <View style={styles.taskInfo}>
-          <Text style={styles.taskTitle}>{task.title}</Text>
-          <Text style={styles.taskDescription}>{task.description}</Text>
-          <View style={styles.taskMeta}>
-            <Text style={styles.taskMetaText}>
-              Asignada a: {assignedTo || 'No asignada'}
-            </Text>
-            <Text style={styles.taskMetaText}>
-              • Creada por: {createdBy || 'Desconocido'}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.taskActions}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => onEdit(task)}
-          >
-            <Ionicons name="create-outline" size={18} color="#5D8AA8" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => onDelete(task)}
-          >
-            <Ionicons name="trash-outline" size={18} color="#e74c3c" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.taskFooter}>
-        <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(task.priority) }]}>
-          <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
-        </View>
-        <Text style={styles.dueDate}>
-          Vence: {task.dueDate.toLocaleDateString('es-ES')}
-        </Text>
-        <TouchableOpacity 
-          style={styles.viewButton}
-          onPress={() => onView(task)}
-        >
-          <Text style={styles.viewButtonText}>Ver</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
 
 export default function TasksScreen({ route, navigation }: Props) {
   const { userType, userUID, userName, userTeamUIDs } = route.params;
@@ -126,6 +48,7 @@ export default function TasksScreen({ route, navigation }: Props) {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<TaskModalMode>('create');
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch tasks AND users ONCE when component mounts
   useEffect(() => {
@@ -167,6 +90,12 @@ export default function TasksScreen({ route, navigation }: Props) {
 
   // Filtrar tareas creadas por el manager actual
   const managerTasks = tasks.filter(task => task.createdBy === userUID);
+
+  // Filtrar tareas por búsqueda
+  const filteredTasks = managerTasks.filter(task =>
+    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    task.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Funciones de navegación
   const toggleNav = () => {
@@ -376,19 +305,39 @@ export default function TasksScreen({ route, navigation }: Props) {
             <Text style={styles.createButtonText}>Crear Nueva Tarea</Text>
           </TouchableOpacity>
 
+          {/* Barra de búsqueda */}
+          {managerTasks.length > 0 && (
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#5D8AA8" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar tareas por título o descripción..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#B2BEC3" />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           {/* Lista de Tareas */}
           <View style={styles.container}>
-            {managerTasks.length === 0 ? (
+            {filteredTasks.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="document-text-outline" size={64} color="#5D8AA8" />
-                <Text style={styles.emptyStateText}>No hay tareas creadas</Text>
+                <Text style={styles.emptyStateText}>
+                  {searchQuery ? 'No se encontraron tareas' : 'No hay tareas creadas'}
+                </Text>
                 <Text style={styles.emptyStateSubtext}>
                   Presiona el botón de arriba para crear tu primera tarea
                 </Text>
               </View>
             ) : (
               <FlatList
-                data={managerTasks}
+                data={filteredTasks}
                 keyExtractor={(item) => item.uid}
                 renderItem={({ item }) => (
                   <TaskCard
@@ -469,6 +418,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e6f7ff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#4A6572',
+    marginLeft: 12,
+    padding: 0,
   },
   container: {
     flex: 1,
@@ -566,12 +539,31 @@ const styles = StyleSheet.create({
     borderTopColor: '#f0f8ff',
     paddingTop: 12,
   },
+  taskBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   priorityBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   priorityText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  completedText: {
     fontSize: 10,
     fontWeight: 'bold',
     color: '#FFFFFF',

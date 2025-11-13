@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import miscService from '../services/misc.service';
 import userService from '../services/user.service';
@@ -9,19 +9,22 @@ type MemberSelectorProps = {
   selectedMemberIds: string[];
   onMembersChange: (memberIds: string[]) => void;
   disabled?: boolean;
+  viewMode?: boolean;
 };
 
 const MemberSelector: React.FC<MemberSelectorProps> = ({
   selectedMemberIds,
   onMembersChange,
-  disabled = false
+  disabled = false,
+  viewMode = false
 }) => {
-  const [workers, setWorkers] = React.useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
-      const fetchedWorkers = await userService.getUsersByRole('worker');
-      setWorkers(fetchedWorkers);
+      const users = await userService.getAllUsers();
+      setAllUsers(users);
     };
     fetchData();
   }, []);
@@ -43,6 +46,39 @@ const MemberSelector: React.FC<MemberSelectorProps> = ({
 
   const colors = ['#4A6572', '#344955', '#5D8AA8', '#7F8C8D', '#B2BEC3'];
 
+  // Filtrar usuarios por búsqueda
+  const filteredUsers = allUsers.filter(user =>
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Modo vista: solo mostrar los miembros seleccionados
+  if (viewMode) {
+    const selectedUsers = allUsers.filter(u => selectedMemberIds.includes(u.uid));
+    
+    return (
+      <View style={styles.container}>
+        <Text style={styles.label}>Miembros del Equipo</Text>
+        <View style={styles.viewModeContainer}>
+          {selectedUsers.map((user) => (
+            <View key={user.uid} style={styles.viewModeMemberCard}>
+              <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(user.uid, colors) }]}>
+                <Text style={styles.avatarText}>
+                  {user.name.split(' ').map(n => n[0]).join('')}
+                </Text>
+              </View>
+              <View style={styles.memberInfo}>
+                <Text style={styles.memberName}>{user.name}</Text>
+                <Text style={styles.memberEmail}>{user.email}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  // Modo edición/creación: mostrar lista completa con checkboxes
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Miembros del Equipo</Text>
@@ -53,34 +89,50 @@ const MemberSelector: React.FC<MemberSelectorProps> = ({
         }
       </Text>
       
-      <ScrollView style={styles.membersList} showsVerticalScrollIndicator={false}>
-        {workers.map((worker) => (
+      {/* Buscador */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#5D8AA8" />
+        <TextInput
+          style={[styles.searchInput, disabled && styles.inputDisabled]}
+          placeholder="Buscar miembros..."
+          value={searchQuery}
+          onChangeText={text => !disabled && setSearchQuery(text)}
+          editable={!disabled}
+        />
+      </View>
+      
+      <ScrollView 
+        style={styles.membersList} 
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+      >
+        {filteredUsers.map((user) => (
           <TouchableOpacity
-            key={worker.uid}
+            key={user.uid}
             style={[
               styles.memberItem,
-              selectedMemberIds.includes(worker.uid) && styles.memberItemSelected,
+              selectedMemberIds.includes(user.uid) && styles.memberItemSelected,
               disabled && styles.memberItemDisabled
             ]}
-            onPress={() => toggleMember(worker.uid)}
+            onPress={() => toggleMember(user.uid)}
             disabled={disabled}
           >
-            <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(worker.uid, colors) }]}>
+            <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(user.uid, colors) }]}>
               <Text style={styles.avatarText}>
-                {worker.name.split(' ').map(n => n[0]).join('')}
+                {user.name.split(' ').map(n => n[0]).join('')}
               </Text>
             </View>
             
             <View style={styles.memberInfo}>
-              <Text style={styles.memberName}>{worker.name}</Text>
-              <Text style={styles.memberEmail}>{worker.email}</Text>
-              <Text style={styles.memberId}>ID: {worker.uid}</Text>
+              <Text style={styles.memberName}>{user.name}</Text>
+              <Text style={styles.memberEmail}>{user.email}</Text>
+              <Text style={styles.memberId}>ID: {user.uid}</Text>
             </View>
             
             <Ionicons 
-              name={selectedMemberIds.includes(worker.uid) ? "checkbox" : "square-outline"} 
+              name={selectedMemberIds.includes(user.uid) ? "checkbox" : "square-outline"} 
               size={24} 
-              color={selectedMemberIds.includes(worker.uid) ? '#4A6572' : '#B2BEC3'} 
+              color={selectedMemberIds.includes(user.uid) ? '#4A6572' : '#B2BEC3'} 
             />
           </TouchableOpacity>
         ))}
@@ -103,6 +155,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7F8C8D',
     marginBottom: 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fdff',
+    borderWidth: 1,
+    borderColor: '#e6f7ff',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#4A6572',
+    marginLeft: 8,
+    padding: 0,
+  },
+  inputDisabled: {
+    opacity: 0.6,
   },
   membersList: {
     maxHeight: 200,
@@ -155,6 +228,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#B2BEC3',
     fontStyle: 'italic',
+  },
+  viewModeContainer: {
+    gap: 10,
+  },
+  viewModeMemberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fdff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e6f7ff',
   },
 });
 

@@ -142,38 +142,46 @@ const TeamFormModal: React.FC<TeamFormModalProps> = ({
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
               {/* Campo Nombre */}
               <View style={styles.formSection}>
-                <Text style={styles.sectionLabel}>Nombre del Equipo *</Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    errors.name && styles.inputError,
-                    isViewMode && styles.inputDisabled
-                  ]}
-                  placeholder="Ingresa el nombre del equipo"
-                  value={name}
-                  onChangeText={setName}
-                  editable={!isViewMode}
-                />
+                <Text style={styles.sectionLabel}>
+                  Nombre del Equipo{!isViewMode && ' *'}
+                </Text>
+                {isViewMode ? (
+                  <Text style={styles.viewModeText}>{name}</Text>
+                ) : (
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      errors.name && styles.inputError,
+                    ]}
+                    placeholder="Ingresa el nombre del equipo"
+                    value={name}
+                    onChangeText={setName}
+                  />
+                )}
                 {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
               </View>
 
               {/* Campo Descripción */}
               <View style={styles.formSection}>
                 <Text style={styles.sectionLabel}>Descripción</Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    styles.textArea,
-                    isViewMode && styles.inputDisabled
-                  ]}
-                  placeholder="Describe el propósito del equipo"
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  editable={!isViewMode}
-                />
+                {isViewMode ? (
+                  <Text style={styles.viewModeText}>
+                    {description || 'Sin descripción'}
+                  </Text>
+                ) : (
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      styles.textArea,
+                    ]}
+                    placeholder="Describe el propósito del equipo"
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                )}
               </View>
 
               {/* Selector de Miembros */}
@@ -181,6 +189,7 @@ const TeamFormModal: React.FC<TeamFormModalProps> = ({
                 selectedMemberIds={selectedMemberIds}
                 onMembersChange={setSelectedMemberIds}
                 disabled={isViewMode}
+                viewMode={isViewMode}
               />
               {errors.members && <Text style={styles.errorText}>{errors.members}</Text>}
             </ScrollView>
@@ -284,6 +293,12 @@ const styles = StyleSheet.create({
   inputDisabled: {
     backgroundColor: '#f5f5f5',
     color: '#7F8C8D',
+  },
+  viewModeText: {
+    fontSize: 16,
+    color: '#4A6572',
+    lineHeight: 24,
+    paddingVertical: 4,
   },
   errorText: {
     fontSize: 14,
