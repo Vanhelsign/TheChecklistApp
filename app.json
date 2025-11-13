@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "RoadCheck",
-    "slug": "RoadCheck",
+    "slug": "checklist",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -32,7 +32,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "af667a27-0d86-47cf-b5de-a401f253d8b4"
+        "projectId": "7fb8f7ad-169f-443b-b3f1-1253fd008fb9"
       }
     }
   }

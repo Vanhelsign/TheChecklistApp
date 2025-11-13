@@ -1,8 +1,37 @@
 import { db } from "../config/firebase.config";
-import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc, onSnapshot, query } from "firebase/firestore";
 import { Team } from "../types/navigation";
 
 class TeamService {
+  // Método con listener en tiempo real para equipos
+  subscribeToTeams = (onUpdate: (teams: Team[]) => void, onError?: (error: Error) => void) => {
+    const teamsRef = collection(db, 'teams');
+    const q = query(teamsRef);
+    
+    return onSnapshot(
+      q,
+      {
+        includeMetadataChanges: true
+      },
+      (snapshot) => {
+        const teams = snapshot.docs.map(doc => ({
+          uid: doc.id,
+          name: doc.data().name,
+          description: doc.data().description,
+          managerUID: doc.data().managerUID,
+          memberUIDs: doc.data().memberUIDs || [],
+          createdAt: doc.data().createdAt.toDate(),
+        })) as Team[];
+        
+        onUpdate(teams);
+      },
+      (error) => {
+        console.error('Error en suscripción de equipos:', error);
+        if (onError) onError(error);
+      }
+    );
+  };
+
   getAllTeams = async () => {
     const teamsRef = collection(db, 'teams');
     const data = await getDocs(teamsRef);

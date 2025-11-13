@@ -166,7 +166,19 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
       const updated = prev.map(i => {
         if (i.id !== id) return i;
         if (i.type === 'textInput') return { ...i, value };
-        if (i.type === 'numberInput') return { ...i, numberValue: value ? Number(value) : undefined };
+        if (i.type === 'numberInput') {
+          // Validar que solo contenga números, punto decimal o esté vacío
+          if (value === '' || value === '-') {
+            return { ...i, numberValue: undefined };
+          }
+          const numValue = Number(value);
+          // Solo actualizar si es un número válido
+          if (!isNaN(numValue)) {
+            return { ...i, numberValue: numValue };
+          }
+          // Si no es válido, mantener el valor anterior
+          return i;
+        }
         if (i.type === 'fileUpload') return { ...i, fileUri: value };
         if (i.type === 'signUpload') return { ...i, signatureUri: value };
         return i;
@@ -209,6 +221,34 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
         simpleAlertService.showAlert('Error', 'No se pudo eliminar la subtarea en el servidor.');
       }
     }
+  };
+
+  const moveChecklistItem = (id: string, direction: 'up' | 'down') => {
+    setChecklistItems(prev => {
+      const index = prev.findIndex(i => i.id === id);
+      if (index === -1) return prev;
+      
+      // No mover si ya está en el límite
+      if ((direction === 'up' && index === 0) || (direction === 'down' && index === prev.length - 1)) {
+        return prev;
+      }
+
+      const newItems = [...prev];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      
+      // Intercambiar posiciones
+      [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
+      
+      // Persistir si está en modo vista
+      if (isViewMode && task?.uid) {
+        taskService.updateTask(task.uid, { checklistItems: newItems }).catch(err => {
+          console.error('Failed to reorder checklist:', err);
+          simpleAlertService.showAlert('Error', 'No se pudo reordenar la subtarea en el servidor.');
+        });
+      }
+      
+      return newItems;
+    });
   };
 
   const handleSave = () => {
@@ -335,39 +375,45 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
             >
               {/* Campo Título */}
               <View style={styles.formSection}>
-                <Text style={styles.sectionLabel}>Título *</Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    errors.title && styles.inputError,
-                    isViewMode && styles.inputDisabled
-                  ]}
-                  placeholder="Ingresa el título de la tarea"
-                  value={title}
-                  onChangeText={setTitle}
-                  editable={!isViewMode}
-                />
+                <Text style={styles.sectionLabel}>Título{!isViewMode && ' *'}</Text>
+                {isViewMode ? (
+                  <Text style={styles.viewModeText}>{title}</Text>
+                ) : (
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      errors.title && styles.inputError
+                    ]}
+                    placeholder="Ingresa el título de la tarea"
+                    value={title}
+                    onChangeText={setTitle}
+                    editable={true}
+                  />
+                )}
                 {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
               </View>
 
               {/* Campo Descripción */}
               <View style={styles.formSection}>
-                <Text style={styles.sectionLabel}>Descripción *</Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    styles.textArea,
-                    errors.description && styles.inputError,
-                    isViewMode && styles.inputDisabled
-                  ]}
-                  placeholder="Describe los detalles de la tarea"
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  editable={!isViewMode}
-                />
+                <Text style={styles.sectionLabel}>Descripción{!isViewMode && ' *'}</Text>
+                {isViewMode ? (
+                  <Text style={styles.viewModeText}>{description}</Text>
+                ) : (
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      styles.textArea,
+                      errors.description && styles.inputError
+                    ]}
+                    placeholder="Describe los detalles de la tarea"
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                    editable={true}
+                  />
+                )}
                 {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
               </View>
 
@@ -418,8 +464,12 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                         {item.type === 'numberInput' && (
                           <TextInput
                             placeholder="Ingresa un número..."
-                            value={item.numberValue !== undefined ? String(item.numberValue) : ''}
-                            onChangeText={(v) => updateChecklistItemValue(item.id, v)}
+                            value={item.numberValue !== undefined && !isNaN(item.numberValue) ? String(item.numberValue) : ''}
+                            onChangeText={(v) => {
+                              // Permitir solo números, punto decimal, y signo negativo al inicio
+                              const sanitized = v.replace(/[^0-9.-]/g, '');
+                              updateChecklistItemValue(item.id, sanitized);
+                            }}
                             editable={true}
                             keyboardType="numeric"
                             style={[styles.checklistValueInput, item.completed && styles.checklistTextCompleted]}
@@ -452,9 +502,35 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                       </View>
 
                       {!isViewMode && (
-                        <TouchableOpacity onPress={() => removeChecklistItem(item.id)} style={styles.removeChecklistBtn}>
-                          <Ionicons name="trash-outline" size={18} color="#e74c3c" />
-                        </TouchableOpacity>
+                        <View style={styles.checklistActions}>
+                          <View style={styles.reorderButtons}>
+                            <TouchableOpacity 
+                              onPress={() => moveChecklistItem(item.id, 'up')} 
+                              style={styles.reorderBtn}
+                              disabled={checklistItems.indexOf(item) === 0}
+                            >
+                              <Ionicons 
+                                name="chevron-up" 
+                                size={16} 
+                                color={checklistItems.indexOf(item) === 0 ? '#ccc' : '#5D8AA8'} 
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              onPress={() => moveChecklistItem(item.id, 'down')} 
+                              style={styles.reorderBtn}
+                              disabled={checklistItems.indexOf(item) === checklistItems.length - 1}
+                            >
+                              <Ionicons 
+                                name="chevron-down" 
+                                size={16} 
+                                color={checklistItems.indexOf(item) === checklistItems.length - 1 ? '#ccc' : '#5D8AA8'} 
+                              />
+                            </TouchableOpacity>
+                          </View>
+                          <TouchableOpacity onPress={() => removeChecklistItem(item.id)} style={styles.removeChecklistBtn}>
+                            <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+                          </TouchableOpacity>
+                        </View>
                       )}
                     </View>
                   ))
@@ -513,28 +589,36 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
               {/* Selector de Fecha */}
               <View style={styles.formSection}>
                 <Text style={styles.sectionLabel}>Fecha Límite</Text>
-                <TouchableOpacity 
-                  style={styles.dateButton}
-                  onPress={() => !isViewMode && setShowDatePicker(true)}
-                  disabled={isViewMode}
-                >
-                  <Ionicons name="calendar" size={20} color="#5D8AA8" />
-                  <Text style={styles.dateButtonText}>
-                    {formatDate(dueDate)}
-                  </Text>
-                </TouchableOpacity>
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={dueDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, date) => {
-                      setShowDatePicker(false);
-                      if (date) {
-                        setDueDate(date);
-                      }
-                    }}
-                  />
+                {isViewMode ? (
+                  <View style={styles.viewModeDateContainer}>
+                    <Ionicons name="calendar" size={20} color="#5D8AA8" />
+                    <Text style={styles.viewModeText}>{formatDate(dueDate)}</Text>
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity 
+                      style={styles.dateButton}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Ionicons name="calendar" size={20} color="#5D8AA8" />
+                      <Text style={styles.dateButtonText}>
+                        {formatDate(dueDate)}
+                      </Text>
+                    </TouchableOpacity>
+                    {showDatePicker && (
+                      <DateTimePicker
+                        value={dueDate}
+                        mode="date"
+                        display="default"
+                        onChange={(event, date) => {
+                          setShowDatePicker(false);
+                          if (date) {
+                            setDueDate(date);
+                          }
+                        }}
+                      />
+                    )}
+                  </>
                 )}
               </View>
 
@@ -625,6 +709,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 selectedUserUID={selectedUserUID}
                 onUserChange={setSelectedUserUID}
                 disabled={isViewMode}
+                viewMode={isViewMode}
               />
               {errors.assignee && <Text style={styles.errorText}>{errors.assignee}</Text>}
             </ScrollView>
@@ -848,6 +933,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: '#4A6572',
+    fontWeight: '600',
   },
   checklistTextCompleted: {
     textDecorationLine: 'line-through',
@@ -863,10 +949,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
     color: '#4A6572',
+    fontWeight: '600',
   },
   removeChecklistBtn: {
-    marginLeft: 8,
     padding: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addChecklistRow: {
     flexDirection: 'row',
@@ -967,6 +1055,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 44,
+  },
+  viewModeText: {
+    fontSize: 16,
+    color: '#4A6572',
+    lineHeight: 24,
+    marginLeft: 8,
+  },
+  viewModeDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  checklistActions: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  reorderButtons: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reorderBtn: {
+    padding: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 24,
   },
 });
 

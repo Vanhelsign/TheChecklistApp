@@ -16,6 +16,7 @@ type AssigneeSelectorProps = {
   selectedUserUID?: string;
   onUserChange: (userId?: string) => void;
   disabled?: boolean;
+  viewMode?: boolean;
 };
 
 const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
@@ -26,6 +27,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
   selectedUserUID,
   onUserChange,
   disabled = false,
+  viewMode = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
@@ -33,23 +35,37 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [fetchedUsers, fetchedTeams] = await Promise.all([
-          userService.getAllUsers(),
-          teamService.getAllTeams()
-        ]);
+    setLoading(true);
+
+    // Suscribirse a usuarios en tiempo real
+    const unsubscribeUsers = userService.subscribeToUsers(
+      (fetchedUsers) => {
         setUsers(fetchedUsers);
-        setTeams(fetchedTeams);
-      } catch (error) {
+        setLoading(false);
+      },
+      (error) => {
         console.error('Error loading users:', error);
-      } finally {
         setLoading(false);
       }
-    };
+    );
 
-    loadData();
+    // Suscribirse a equipos en tiempo real
+    const unsubscribeTeams = teamService.subscribeToTeams(
+      (fetchedTeams) => {
+        setTeams(fetchedTeams);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error loading teams:', error);
+        setLoading(false);
+      }
+    );
+
+    // Cleanup: cancelar ambas suscripciones
+    return () => {
+      unsubscribeUsers();
+      unsubscribeTeams();
+    };
   }, []);
 
   const filteredTeams = teams.filter(team =>
@@ -62,6 +78,55 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
   );
 
   const colors = ['#4A6572', '#344955', '#5D8AA8', '#7F8C8D', '#B2BEC3'];
+
+  // Si está en modo vista, solo mostrar quien está asignado
+  if (viewMode) {
+    const assignedTeam = assigneeType === 'team' && selectedTeamUID 
+      ? teams.find(t => t.uid === selectedTeamUID)
+      : null;
+    
+    const assignedUser = assigneeType === 'user' && selectedUserUID
+      ? users.find(u => u.uid === selectedUserUID)
+      : null;
+
+    return (
+      <View style={styles.container}>
+        <Text style={styles.label}>Asignado a</Text>
+        
+        {assigneeType === 'team' && assignedTeam ? (
+          <View style={styles.viewModeCard}>
+            <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(assignedTeam.uid, colors) }]}>
+              <Ionicons name="people" size={16} color="#FFFFFF" />
+            </View>
+            <View style={styles.resultInfo}>
+              <Text style={styles.resultName}>{assignedTeam.name}</Text>
+              <Text style={styles.resultDescription}>{assignedTeam.description}</Text>
+              <Text style={styles.resultMeta}>
+                {assignedTeam.memberUIDs.length} miembros
+              </Text>
+            </View>
+          </View>
+        ) : assigneeType === 'user' && assignedUser ? (
+          <View style={styles.viewModeCard}>
+            <View style={[styles.avatar, { backgroundColor: miscService.getAvatarColor(assignedUser.uid, colors) }]}>
+              <Text style={styles.avatarText}>
+                {assignedUser.name.split(' ').map(n => n[0]).join('')}
+              </Text>
+            </View>
+            <View style={styles.resultInfo}>
+              <Text style={styles.resultName}>{assignedUser.name}</Text>
+              <Text style={styles.resultDescription}>{assignedUser.email}</Text>
+              <Text style={styles.resultMeta}>
+                {assignedUser.role === 'manager' ? 'Manager' : 'Trabajador'}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.noAssigneeText}>Sin asignar</Text>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -302,7 +367,21 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.5,
+  },
+  viewModeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fdff',
+    borderWidth: 1,
+    borderColor: '#e6f7ff',
+    borderRadius: 12,
+    padding: 12,
+  },
+  noAssigneeText: {
+    fontSize: 16,
+    color: '#7F8C8D',
+    fontStyle: 'italic',
   },
 });
 

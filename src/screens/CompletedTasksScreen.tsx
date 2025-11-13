@@ -49,18 +49,31 @@ export default function CompletedTasksScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [fetchedTasks, fetchedUsers, fetchedTeams] = await Promise.all([
-        taskService.getAllTasks(),
+      const [fetchedUsers, fetchedTeams] = await Promise.all([
         userService.getAllUsers(),
         teamService.getAllTeams()
       ]);
-      const filteredTasks = fetchedTasks.filter(task => task.completed);
-      setTasks(filteredTasks);
       setUsers(fetchedUsers);
       setTeams(fetchedTeams);
     };
     
     fetchData();
+
+    // Suscribirse a tareas en tiempo real con caché offline
+    const unsubscribe = taskService.subscribeToTasks(
+      (fetchedTasks) => {
+        const filteredTasks = fetchedTasks.filter(task => task.completed);
+        setTasks(filteredTasks);
+      },
+      (error) => {
+        console.error("Error en suscripción de tareas completadas:", error);
+      }
+    );
+
+    // Cleanup
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Funciones de navegación (igual que en las otras pantallas)

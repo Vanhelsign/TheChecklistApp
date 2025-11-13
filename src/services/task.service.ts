@@ -1,8 +1,44 @@
 import { db } from "../config/firebase.config";
-import { addDoc, collection, getDocs, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { addDoc, collection, getDocs, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove, onSnapshot, query } from "firebase/firestore";
 import { Priority, Task, User } from "../types/navigation";
 
 class TaskService {
+  // Método mejorado con listener en tiempo real y caché offline
+  subscribeToTasks = (onUpdate: (tasks: Task[]) => void, onError?: (error: Error) => void) => {
+    const tasksRef = collection(db, 'tasks');
+    const q = query(tasksRef);
+    
+    return onSnapshot(
+      q, 
+      {
+        // Esta opción permite que el listener funcione con datos de caché
+        includeMetadataChanges: true
+      },
+      (snapshot) => {
+        const tasks = snapshot.docs.map(doc => ({
+          uid: doc.id,
+          title: doc.data().title,
+          description: doc.data().description,
+          dueDate: doc.data().dueDate.toDate(),
+          priority: doc.data().priority as Priority,
+          completed: doc.data().completed,
+          checklistItems: doc.data().checklistItems ?? [],
+          createdAt: doc.data().createdAt.toDate(),
+          assignedTo: doc.data().assignedTo as 'team' | 'user',
+          assignedTeamUID: doc.data().assignedTeamUID,
+          assignedUserUID: doc.data().assignedUserUID,
+          createdBy: doc.data().createdBy,
+        })) as Task[];
+        
+        onUpdate(tasks);
+      },
+      (error) => {
+        console.error('Error en subscripción de tareas:', error);
+        if (onError) onError(error);
+      }
+    );
+  }
+
   getAllTasks = async () => {
     const tasksRef = collection(db, 'tasks');
     const data = await getDocs(tasksRef);

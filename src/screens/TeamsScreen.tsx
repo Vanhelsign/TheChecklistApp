@@ -42,16 +42,20 @@ export default function TeamsScreen({ route, navigation }: Props) {
   const [selectedTeam, setSelectedTeam] = useState<Team | undefined>(undefined);
 
   useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        const fetchedTeams = await teamService.getAllTeams();
+    // Suscribirse a equipos en tiempo real con caché offline
+    const unsubscribe = teamService.subscribeToTeams(
+      (fetchedTeams) => {
         setTeams(fetchedTeams);
-      } catch (error) {
-        console.error('Error fetching teams:', error);
+      },
+      (error) => {
+        console.error('Error en suscripción de equipos:', error);
       }
-    };
+    );
 
-    fetchTeams();
+    // Cleanup: cancelar suscripción cuando el componente se desmonte
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Filtrar equipos del manager actual

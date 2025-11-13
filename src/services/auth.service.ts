@@ -17,7 +17,18 @@ class AuthService {
 
       this.getUserDetailsAndShowHome(usersRef, navigation);
     }
-    catch(err) {
+    catch(err: any) {
+      // Detectar error de falta de conexión a internet
+      if (err.code === 'auth/network-request-failed') {
+        simpleAlertService.showAlert(
+          'Sin conexión a internet',
+          'El inicio de sesión requiere conexión a internet. Por favor verifica tu conexión e intenta nuevamente.'
+        );
+        console.error('Error de red:', err);
+        return;
+      }
+
+      // Otros errores de autenticación
       const message = "El correo o la contraseña son incorrectos. Vuelve a intentarlo.";
       simpleAlertService.showError(message);
       console.error(err);
@@ -30,18 +41,34 @@ class AuthService {
       simpleAlertService.showError("No UID provided!");
       return;
     }
-    const data = await getDocs(usersRef);
-    const filteredData = data.docs.map((user) => ({...user.data()})).find(x => x.uid === uid);
-    if(filteredData){
-      navigation.replace('Home', { 
-      userType: filteredData.role,
-      userUID: filteredData.uid,
-      userName: filteredData.name,
-      userTeamUIDs: filteredData.teamUIDs
-      });
-    }
-    else {
-      simpleAlertService.showError("Favor de contactar con un administrador. ERR-001");
+    
+    try {
+      // getDocs aquí está bien - solo se ejecuta al login y usará caché offline automáticamente
+      const data = await getDocs(usersRef);
+      const filteredData = data.docs.map((user) => ({...user.data()})).find(x => x.uid === uid);
+      if(filteredData){
+        navigation.replace('Home', { 
+        userType: filteredData.role,
+        userUID: filteredData.uid,
+        userName: filteredData.name,
+        userTeamUIDs: filteredData.teamUIDs
+        });
+      }
+      else {
+        simpleAlertService.showError("Favor de contactar con un administrador. ERR-001");
+      }
+    } catch (err: any) {
+      // Si hay error de red al obtener datos del usuario
+      if (err.code === 'unavailable' || err.message?.includes('network')) {
+        simpleAlertService.showAlert(
+          'Error de conexión',
+          'No se pudieron cargar tus datos. Por favor verifica tu conexión a internet.'
+        );
+        console.error('Error de red al obtener datos de usuario:', err);
+      } else {
+        simpleAlertService.showError("Error al cargar datos del usuario. ERR-002");
+        console.error('Error al obtener datos de usuario:', err);
+      }
     }
   };
   
@@ -79,6 +106,16 @@ class AuthService {
     } catch (err: any) {
       let message = 'Error al crear la cuenta';
       
+      // Detectar error de falta de conexión a internet
+      if (err.code === 'auth/network-request-failed') {
+        simpleAlertService.showAlert(
+          'Sin conexión a internet',
+          'El registro requiere conexión a internet. Por favor verifica tu conexión e intenta nuevamente.'
+        );
+        console.error('Error de red en registro:', err);
+        return;
+      }
+      
       if (err.code === 'auth/email-already-in-use') {
         message = 'Este correo ya está registrado';
       } else if (err.code === 'auth/invalid-email') {
@@ -111,6 +148,7 @@ class AuthService {
     return onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
+          // getDocs aquí está bien - solo se ejecuta al verificar login y usará caché offline
           const data = await getDocs(usersRef);
           const filteredData = data.docs
             .map((doc) => ({ ...doc.data() }))

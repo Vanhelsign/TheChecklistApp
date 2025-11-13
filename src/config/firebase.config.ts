@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import {
   FIREBASE_API_KEY,
   FIREBASE_AUTH_DOMAIN,
@@ -44,4 +44,12 @@ if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
 }
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Inicializar Firestore con persistencia offline habilitada
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});
+
+console.log('Firebase inicializado con persistencia offline');

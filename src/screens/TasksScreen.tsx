@@ -132,12 +132,10 @@ export default function TasksScreen({ route, navigation }: Props) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [fetchedTasks, fetchedUsers, fetchedTeams] = await Promise.all([
-          taskService.getAllTasks(),
+        const [fetchedUsers, fetchedTeams] = await Promise.all([
           userService.getAllUsers(),
           teamService.getAllTeams()
         ]);
-        setTasks(fetchedTasks);
         setUsers(fetchedUsers);
         setTeams(fetchedTeams);
       } catch (error) {
@@ -148,6 +146,23 @@ export default function TasksScreen({ route, navigation }: Props) {
     };
     
     fetchData();
+
+    // Suscribirse a tareas en tiempo real con caché offline
+    const unsubscribe = taskService.subscribeToTasks(
+      (fetchedTasks) => {
+        setTasks(fetchedTasks);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error en suscripción de tareas:", error);
+        setLoading(false);
+      }
+    );
+
+    // Cleanup: cancelar suscripción cuando el componente se desmonte
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Filtrar tareas creadas por el manager actual
