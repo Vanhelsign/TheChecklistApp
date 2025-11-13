@@ -634,27 +634,43 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
               {/* Selector de Prioridad */}
               <View style={styles.formSection}>
                 <Text style={styles.sectionLabel}>Prioridad</Text>
-                <View style={styles.priorityButtons}>
-                  {(['alta', 'media', 'baja'] as Priority[]).map((prio) => (
-                    <TouchableOpacity
-                      key={prio}
-                      style={[
-                        styles.priorityButton,
-                        priority === prio && styles.priorityButtonSelected,
-                        isViewMode && styles.priorityButtonDisabled
-                      ]}
-                      onPress={() => !isViewMode && setPriority(prio)}
-                      disabled={isViewMode}
-                    >
-                      <Text style={[
-                        styles.priorityButtonText,
-                        priority === prio && styles.priorityButtonTextSelected
-                      ]}>
-                        {prio.charAt(0).toUpperCase() + prio.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                {isViewMode ? (
+                  // Modo vista: mostrar solo la prioridad seleccionada con color
+                  <View style={[
+                    styles.priorityBadge,
+                    priority === 'baja' && styles.priorityBadgeBaja,
+                    priority === 'media' && styles.priorityBadgeMedia,
+                    priority === 'alta' && styles.priorityBadgeAlta,
+                  ]}>
+                    <Text style={styles.priorityBadgeText}>
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    </Text>
+                  </View>
+                ) : (
+                  // Modo crear/editar: mostrar las tres opciones
+                  <View style={styles.priorityButtons}>
+                    {(['baja', 'media', 'alta'] as Priority[]).map((prio) => (
+                      <TouchableOpacity
+                        key={prio}
+                        style={[
+                          styles.priorityButton,
+                          priority === prio && styles.priorityButtonSelected,
+                          priority === prio && prio === 'baja' && styles.priorityButtonBaja,
+                          priority === prio && prio === 'media' && styles.priorityButtonMedia,
+                          priority === prio && prio === 'alta' && styles.priorityButtonAlta,
+                        ]}
+                        onPress={() => setPriority(prio)}
+                      >
+                        <Text style={[
+                          styles.priorityButtonText,
+                          priority === prio && styles.priorityButtonTextSelected
+                        ]}>
+                          {prio.charAt(0).toUpperCase() + prio.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
 
               {/* Selector de Estado de Tarea */}
@@ -667,6 +683,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                         style={[
                           styles.priorityButton,
                           status === stat && styles.priorityButtonSelected,
+                          stat === TaskStatus.Pending && status === stat && styles.pendingButtonSelected,
                           stat === TaskStatus.Completed && status === stat && styles.completedButtonSelected,
                         ]}
                         onPress={() => {
@@ -700,8 +717,8 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                       >
                         <Text style={[
                           styles.priorityButtonText,
-                          status === stat && styles.priorityButtonTextSelected,
-                          stat === TaskStatus.Completed && status === stat && styles.completedButtonTextSelected,
+                          status === stat && stat === TaskStatus.Pending && styles.pendingButtonTextSelected,
+                          status === stat && stat === TaskStatus.Completed && styles.completedButtonTextSelected,
                         ]}>
                           {stat ? 'Completado' : 'Pendiente'}
                         </Text>
@@ -880,6 +897,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#e6f7ff',
     borderColor: '#5D8AA8',
   },
+  priorityButtonBaja: {
+    backgroundColor: '#27AE60',
+    borderColor: '#27AE60',
+  },
+  priorityButtonMedia: {
+    backgroundColor: '#F39C12',
+    borderColor: '#F39C12',
+  },
+  priorityButtonAlta: {
+    backgroundColor: '#E74C3C',
+    borderColor: '#E74C3C',
+  },
+  pendingButtonSelected: {
+    backgroundColor: '#5D8AA8',
+    borderColor: '#5D8AA8',
+  },
   completedButtonSelected: {
     backgroundColor: '#10b981',
     borderColor: '#059669',
@@ -893,7 +926,32 @@ const styles = StyleSheet.create({
     color: '#5D8AA8',
   },
   priorityButtonTextSelected: {
-    color: '#4A6572',
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  priorityBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 4,
+  },
+  priorityBadgeBaja: {
+    backgroundColor: '#27AE60',
+  },
+  priorityBadgeMedia: {
+    backgroundColor: '#F39C12',
+  },
+  priorityBadgeAlta: {
+    backgroundColor: '#E74C3C',
+  },
+  priorityBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  pendingButtonTextSelected: {
+    color: '#FFFFFF',
     fontWeight: 'bold',
   },
   completedButtonTextSelected: {

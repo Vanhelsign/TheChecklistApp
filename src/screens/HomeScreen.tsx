@@ -148,9 +148,19 @@ export default function HomeScreen({ route, navigation }: Props) {
             contentContainerStyle={styles.scrollContent}
           >
             {userType === 'manager' ? (
-              <ManagerDashboard />
+              <ManagerDashboard 
+                userUID={userUID}
+                userType={userType}
+                userName={userName}
+                userTeamUIDs={userTeamUIDs}
+              />
             ) : (
-              <WorkerDashboard />
+              <WorkerDashboard 
+                userUID={userUID}
+                userType={userType}
+                userName={userName}
+                userTeamUIDs={userTeamUIDs}
+              />
             )}
           </ScrollView>
           
